@@ -119,7 +119,7 @@ const exportSnapshot = async () => {
 return (
     <main className="min-h-screen bg-[#05090c] text-white overflow-hidden">
       {/* Header */}
-      <header className="h-20 border-b border-cyan-500/20 bg-[#071116]/95 flex items-center justify-between gap-4 px-6 md:px-10">
+      <header className="min-h-20 border-b border-cyan-500/20 bg-[#071116]/95 flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-6 md:px-10">
   <div>
     <div className="text-xs tracking-[0.35em] text-cyan-400">
       REAL RAILS • POC 26
@@ -141,7 +141,7 @@ return (
 
     <button
       onClick={exportSnapshot}
-      className="rounded-lg border border-cyan-400/30 bg-cyan-400/10 px-4 py-2 text-xs font-semibold tracking-wider text-cyan-300 transition hover:bg-cyan-400/20"
+      className="w-full rounded-lg border border-cyan-400/30 bg-cyan-400/10 px-3 py-2 text-[10px] font-semibold tracking-wider text-cyan-300 transition hover:bg-cyan-400/20 sm:w-auto sm:px-4 sm:text-xs"
     >
       EXPORT AOI SNAPSHOT
     </button>
