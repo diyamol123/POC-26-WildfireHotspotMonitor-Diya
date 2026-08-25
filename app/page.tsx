@@ -347,7 +347,19 @@ className="relative min-h-[650px] overflow-hidden bg-[#030712]">
               </div>
             </div>
           </div>
+<div className="mt-6 rounded-xl border border-amber-400/20 bg-amber-400/5 p-4">
+  <div className="text-xs tracking-widest text-amber-300">
+    WHY THIS MATTERS
+  </div>
 
+  <p className="mt-2 text-sm leading-6 text-slate-300">
+    {selected.intensity === "CRITICAL"
+      ? "High-intensity thermal activity may require rapid monitoring and response coordination."
+      : selected.intensity === "HIGH"
+      ? "Elevated thermal activity indicates a developing fire risk that should remain under close observation."
+      : "Moderate thermal activity should continue to be monitored for signs of escalation."}
+  </p>
+</div>
           <div className="mt-6">
             <div className="mb-3 text-xs tracking-widest text-slate-500">
               SYSTEM STATUS
