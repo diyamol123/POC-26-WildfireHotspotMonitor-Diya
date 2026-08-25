@@ -1,11 +1,19 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect,useRef, useState } from "react";
 import dynamic from "next/dynamic";
+import html2canvas from "html2canvas-pro";
 
 const WildfireMap = dynamic(
   () => import("./components/WildfireMap"),
-  { ssr: false }
+  {
+    ssr: false,
+    loading: () => (
+      <div className="absolute inset-0 flex items-center justify-center bg-[#030712] text-cyan-400">
+        Loading map...
+      </div>
+    ),
+  }
 );
 const hotspots: {
   id: number;
@@ -74,9 +82,11 @@ const hotspots: {
 
 export default function Home() {
   const [selected, setSelected] = useState<(typeof hotspots)[number]>(hotspots[1]);
-  const [timeOffset, setTimeOffset] = useState(24);
-  const [sensorFilter, setSensorFilter] = useState<"ALL" | "VIIRS" | "MODIS">("ALL");
-  const [time, setTime] = useState<Date | null>(null);
+const [timeOffset, setTimeOffset] = useState(24);
+const [sensorFilter, setSensorFilter] =
+  useState<"ALL" | "VIIRS" | "MODIS">("ALL");
+const [time, setTime] = useState<Date | null>(null);
+const dashboardRef = useRef<HTMLElement | null>(null);
   useEffect(() => {
   setTime(new Date());
 
@@ -86,34 +96,63 @@ export default function Home() {
 
   return () => clearInterval(timer);
 }, []);
+
 const filteredHotspots =
   sensorFilter === "ALL"
     ? hotspots
     : hotspots.filter((spot) => spot.sensor === sensorFilter);
 
-  return (
+const exportSnapshot = async () => {
+  if (!dashboardRef.current) return;
+
+  const canvas = await html2canvas(dashboardRef.current, {
+    useCORS: true,
+    backgroundColor: "#05090c",
+  });
+
+  const link = document.createElement("a");
+  link.download = "wildfire-aoi-snapshot.png";
+  link.href = canvas.toDataURL("image/png");
+  link.click();
+};
+
+return (
     <main className="min-h-screen bg-[#05090c] text-white overflow-hidden">
       {/* Header */}
-      <header className="h-20 border-b border-cyan-500/20 bg-[#071116]/95 flex items-center justify-between px-6 md:px-10">
-        <div>
-          <div className="text-xs tracking-[0.35em] text-cyan-400">
-            REAL RAILS • POC 26
-          </div>
-          <h1 className="text-xl md:text-2xl font-bold tracking-wide">
-            WILDFIRE HOTSPOT MONITOR
-          </h1>
-        </div>
+      <header className="h-20 border-b border-cyan-500/20 bg-[#071116]/95 flex items-center justify-between gap-4 px-6 md:px-10">
+  <div>
+    <div className="text-xs tracking-[0.35em] text-cyan-400">
+      REAL RAILS • POC 26
+    </div>
+    <h1 className="text-xl md:text-2xl font-bold tracking-wide">
+      WILDFIRE HOTSPOT MONITOR
+    </h1>
+  </div>
 
-        <div className="text-right">
-          <div className="text-xs text-slate-500">SYSTEM TIME</div>
-          <div className="font-mono text-cyan-300">
-            {time ? time.toLocaleTimeString("en-IN", { hour12: false }) : "--:--:--"}
-          </div>
-        </div>
-      </header>
+  <div className="flex items-center gap-4">
+    <div className="text-right">
+      <div className="text-xs text-slate-500">SYSTEM TIME</div>
+      <div className="font-mono text-cyan-300">
+        {time
+          ? time.toLocaleTimeString("en-IN", { hour12: false })
+          : "--:--:--"}
+      </div>
+    </div>
+
+    <button
+      onClick={exportSnapshot}
+      className="rounded-lg border border-cyan-400/30 bg-cyan-400/10 px-4 py-2 text-xs font-semibold tracking-wider text-cyan-300 transition hover:bg-cyan-400/20"
+    >
+      EXPORT AOI SNAPSHOT
+    </button>
+  </div>
+</header>
 
       {/* Dashboard */}
-      <section className="grid lg:grid-cols-[1fr_330px] min-h-[calc(100vh-5rem)]">
+      <section
+  ref={dashboardRef}
+  className="grid lg:grid-cols-[1fr_330px] min-h-[calc(100vh-5rem)]"
+>
         {/* Map */}
 <div 
 className="relative min-h-[650px] overflow-hidden bg-[#030712]">
@@ -193,6 +232,13 @@ className="relative min-h-[650px] overflow-hidden bg-[#030712]">
     ))}
   </div>
 </div>
+{/* Export AOI Snapshot */}
+<button
+  onClick={exportSnapshot}
+  className="absolute bottom-6 right-6 z-[1000] rounded-lg border border-cyan-400/30 bg-black/80 px-4 py-3 text-xs font-semibold tracking-wider text-cyan-300 backdrop-blur transition hover:bg-cyan-400/20"
+>
+  EXPORT AOI SNAPSHOT
+</button>
 {/* Time slider */}
 <div className="absolute bottom-20 left-1/2 z-[1000] w-[360px] -translate-x-1/2 rounded-xl border border-cyan-500/20 bg-black/70 p-4 backdrop-blur">
   <div className="mb-2 flex items-center justify-between text-xs">
