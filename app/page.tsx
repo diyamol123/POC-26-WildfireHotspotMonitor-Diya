@@ -1,18 +1,73 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import dynamic from "next/dynamic";
 
-const hotspots = [
-  { id: 1, x: 25, y: 38, intensity: "HIGH", location: "Kerala", temp: "42°C" },
-  { id: 2, x: 48, y: 28, intensity: "CRITICAL", location: "Tamil Nadu", temp: "46°C" },
-  { id: 3, x: 68, y: 50, intensity: "HIGH", location: "Karnataka", temp: "43°C" },
-  { id: 4, x: 38, y: 68, intensity: "MEDIUM", location: "Andhra Pradesh", temp: "39°C" },
-  { id: 5, x: 78, y: 30, intensity: "CRITICAL", location: "Odisha", temp: "47°C" },
-  { id: 6, x: 58, y: 72, intensity: "MEDIUM", location: "Telangana", temp: "40°C" },
+const WildfireMap = dynamic(
+  () => import("./components/WildfireMap"),
+  { ssr: false }
+);
+const hotspots: {
+  id: number;
+  lat: number;
+  lng: number;
+  intensity: "CRITICAL" | "HIGH" | "MEDIUM";
+  location: string;
+  temp: string;
+}[] = [
+  {
+    id: 1,
+    lat: 10.8505,
+    lng: 76.2711,
+    intensity: "HIGH",
+    location: "Kerala",
+    temp: "42°C",
+  },
+  {
+    id: 2,
+    lat: 11.1271,
+    lng: 78.6569,
+    intensity: "CRITICAL",
+    location: "Tamil Nadu",
+    temp: "46°C",
+  },
+  {
+    id: 3,
+    lat: 15.3173,
+    lng: 75.7139,
+    intensity: "HIGH",
+    location: "Karnataka",
+    temp: "43°C",
+  },
+  {
+    id: 4,
+    lat: 15.9129,
+    lng: 79.74,
+    intensity: "MEDIUM",
+    location: "Andhra Pradesh",
+    temp: "39°C",
+  },
+  {
+    id: 5,
+    lat: 20.9517,
+    lng: 85.0985,
+    intensity: "CRITICAL",
+    location: "Odisha",
+    temp: "47°C",
+  },
+  {
+    id: 6,
+    lat: 17.1232,
+    lng: 79.2088,
+    intensity: "MEDIUM",
+    location: "Telangana",
+    temp: "40°C",
+  },
 ];
 
 export default function Home() {
   const [selected, setSelected] = useState(hotspots[1]);
+  const [timeOffset, setTimeOffset] = useState(24);
   const [time, setTime] = useState<Date | null>(null);
   useEffect(() => {
   setTime(new Date());
@@ -48,96 +103,99 @@ export default function Home() {
       {/* Dashboard */}
       <section className="grid lg:grid-cols-[1fr_330px] min-h-[calc(100vh-5rem)]">
         {/* Map */}
-        <div className="relative min-h-[650px] overflow-hidden bg-[#07151a]">
-          {/* Grid */}
-          <div
-            className="absolute inset-0 opacity-30"
-            style={{
-              backgroundImage:
-                "linear-gradient(rgba(34,211,238,.12) 1px, transparent 1px), linear-gradient(90deg, rgba(34,211,238,.12) 1px, transparent 1px)",
-              backgroundSize: "50px 50px",
-            }}
-          />
+<div 
+className="relative min-h-[650px] overflow-hidden bg-[#030712]">
+</div>
+  {/* Real geographic map */}
+  <WildfireMap
+    hotspots={hotspots}
+    onSelect={setSelected}
+  />
 
-          {/* Radar circles */}
-          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
-            <div className="w-[420px] h-[420px] rounded-full border border-cyan-500/20" />
-            <div className="absolute inset-[70px] rounded-full border border-cyan-500/20" />
-            <div className="absolute inset-[140px] rounded-full border border-cyan-500/20" />
-          </div>
+  {/* Cinematic grid */}
+  <div
+    className="pointer-events-none absolute inset-0 z-[500] opacity-20"
+    style={{
+      backgroundImage:
+        "linear-gradient(rgba(34,211,238,.12) 1px, transparent 1px), linear-gradient(90deg, rgba(34,211,238,.12) 1px, transparent 1px)",
+      backgroundSize: "50px 50px",
+    }}
+  />
 
-          {/* Fake geographic silhouette */}
-          <div className="absolute left-[15%] top-[12%] w-[70%] h-[72%] opacity-30">
-            <div className="absolute left-[20%] top-[10%] h-[80%] w-[45%] rotate-[18deg] rounded-[45%] border-2 border-cyan-300/30" />
-            <div className="absolute left-[35%] top-[5%] h-[90%] w-[28%] rotate-[25deg] rounded-[50%] border border-cyan-400/20" />
-          </div>
+  {/* Radar circles */}
+  <div className="pointer-events-none absolute left-1/2 top-1/2 z-[500] -translate-x-1/2 -translate-y-1/2">
+    <div className="h-[420px] w-[420px] rounded-full border border-cyan-500/20" />
 
-          {/* Hotspots */}
-          {hotspots.map((spot) => (
-            <button
-              key={spot.id}
-              onClick={() => setSelected(spot)}
-              className="absolute -translate-x-1/2 -translate-y-1/2 group"
-              style={{ left: `${spot.x}%`, top: `${spot.y}%` }}
-            >
-              <span
-                className={`absolute -inset-5 rounded-full animate-ping ${
-                  spot.intensity === "CRITICAL"
-                    ? "bg-red-500/30"
-                    : spot.intensity === "HIGH"
-                    ? "bg-orange-400/25"
-                    : "bg-yellow-300/20"
-                }`}
-              />
+    <div className="absolute inset-[70px] rounded-full border border-cyan-500/20" />
 
-              <span
-                className={`relative block h-4 w-4 rounded-full border-2 border-white shadow-[0_0_20px_currentColor] ${
-                  spot.intensity === "CRITICAL"
-                    ? "bg-red-500 text-red-500"
-                    : spot.intensity === "HIGH"
-                    ? "bg-orange-400 text-orange-400"
-                    : "bg-yellow-300 text-yellow-300"
-                }`}
-              />
+    <div className="absolute inset-[140px] rounded-full border border-cyan-500/20" />
+  </div>
 
-              <span className="absolute left-6 top-1/2 -translate-y-1/2 whitespace-nowrap rounded bg-black/80 px-2 py-1 text-[10px] opacity-0 group-hover:opacity-100">
-                {spot.location}
-              </span>
-            </button>
-          ))}
+  {/* Map information */}
+  <div className="pointer-events-none absolute left-6 top-6 z-[1000] rounded border border-cyan-400/20 bg-black/70 px-4 py-3 backdrop-blur">
+    <div className="text-[10px] tracking-[0.25em] text-cyan-400">
+      LIVE SATELLITE ANALYSIS
+    </div>
 
-          {/* Map labels */}
-          <div className="absolute left-6 top-6 rounded border border-cyan-400/20 bg-black/50 px-4 py-3 backdrop-blur">
-            <div className="text-[10px] tracking-[0.25em] text-cyan-400">
-              LIVE SATELLITE ANALYSIS
-            </div>
-            <div className="mt-1 text-sm text-slate-300">
-              SOUTH ASIA • ACTIVE MONITORING
-            </div>
-          </div>
+    <div className="mt-1 text-sm text-slate-300">
+      SOUTH ASIA • ACTIVE MONITORING
+    </div>
+  </div>
 
-          <div className="absolute bottom-6 left-6 flex gap-5 rounded border border-white/10 bg-black/60 px-4 py-3 text-xs backdrop-blur">
-            <span>
-              <i className="mr-2 inline-block h-2 w-2 rounded-full bg-red-500" />
-              CRITICAL
-            </span>
-            <span>
-              <i className="mr-2 inline-block h-2 w-2 rounded-full bg-orange-400" />
-              HIGH
-            </span>
-            <span>
-              <i className="mr-2 inline-block h-2 w-2 rounded-full bg-yellow-300" />
-              MEDIUM
-            </span>
-          </div>
+  {/* Legend */}
+  <div className="pointer-events-none absolute bottom-6 left-6 z-[1000] flex gap-5 rounded border border-white/10 bg-black/70 px-4 py-3 text-xs backdrop-blur">
+    <span>
+      <i className="mr-2 inline-block h-2 w-2 rounded-full bg-red-500" />
+      CRITICAL
+    </span>
 
-          <div className="absolute right-6 bottom-6 rounded border border-cyan-500/20 bg-black/60 px-4 py-3 text-xs backdrop-blur">
-            <div className="text-slate-500">HOTSPOTS DETECTED</div>
-            <div className="text-2xl font-bold text-cyan-300">
-              {hotspots.length}
-            </div>
-          </div>
-        </div>
+    <span>
+      <i className="mr-2 inline-block h-2 w-2 rounded-full bg-orange-400" />
+      HIGH
+    </span>
+
+    <span>
+      <i className="mr-2 inline-block h-2 w-2 rounded-full bg-yellow-300" />
+      MEDIUM
+    </span>
+  </div>
+{/* Time slider */}
+<div className="absolute bottom-20 left-1/2 z-[1000] w-[360px] -translate-x-1/2 rounded-xl border border-cyan-500/20 bg-black/70 p-4 backdrop-blur">
+  <div className="mb-2 flex items-center justify-between text-xs">
+    <span className="tracking-widest text-cyan-400">
+      TIME WINDOW
+    </span>
+
+    <span className="font-mono text-slate-300">
+  {timeOffset === 24 ? "NOW" : `${timeOffset}H AGO`}
+</span>
+  <input
+  type="range"
+  min="0"
+  max="24"
+  value={timeOffset}
+  onChange={(event) => setTimeOffset(Number(event.target.value))}
+    className="w-full accent-cyan-400"
+    aria-label="Wildfire observation time"
+  />
+
+  <div className="mt-1 flex justify-between text-[10px] text-slate-500">
+    <span>24H AGO</span>
+    <span>NOW</span>
+  </div>
+</div>
+  {/* Hotspot count */}
+  <div className="absolute bottom-6 right-6 z-[1000] rounded border border-cyan-500/20 bg-black/70 px-4 py-3 text-xs backdrop-blur">
+    <div className="text-slate-500">
+      HOTSPOTS DETECTED
+    </div>
+
+    <div className="text-2xl font-bold text-cyan-300">
+      {hotspots.length}
+    </div>
+  </div>
+
+</div>
 
         {/* Intelligence panel */}
         <aside className="border-l border-cyan-500/20 bg-[#081116] p-6">
