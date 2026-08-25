@@ -1,12 +1,10 @@
 "use client";
 
-import { useEffect, useRef } from "react";
 import {
   MapContainer,
   TileLayer,
   CircleMarker,
   Tooltip,
-  useMap,
 } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 
@@ -31,33 +29,6 @@ const intensityColors: Record<string, string> = {
   MEDIUM: "#fde047",
 };
 
-function MapCleanup() {
-  const map = useMap();
-  const mapRef = useRef(map);
-
-  useEffect(() => {
-    mapRef.current = map;
-
-    return () => {
-      const container = map.getContainer();
-
-      if (container) {
-        const leafletId = (container as HTMLElement & {
-          _leaflet_id?: number;
-        })._leaflet_id;
-
-        if (leafletId) {
-          delete (container as HTMLElement & {
-            _leaflet_id?: number;
-          })._leaflet_id;
-        }
-      }
-    };
-  }, [map]);
-
-  return null;
-}
-
 export default function WildfireMap({
   hotspots,
   onSelect,
@@ -69,8 +40,6 @@ export default function WildfireMap({
       scrollWheelZoom={true}
       className="absolute inset-0 z-0 h-full w-full"
     >
-      <MapCleanup />
-
       <TileLayer
         attribution="&copy; OpenStreetMap contributors"
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"

@@ -75,6 +75,7 @@ const hotspots: {
 export default function Home() {
   const [selected, setSelected] = useState<(typeof hotspots)[number]>(hotspots[1]);
   const [timeOffset, setTimeOffset] = useState(24);
+  const [sensorFilter, setSensorFilter] = useState<"ALL" | "VIIRS" | "MODIS">("ALL");
   const [time, setTime] = useState<Date | null>(null);
   useEffect(() => {
   setTime(new Date());
@@ -85,6 +86,10 @@ export default function Home() {
 
   return () => clearInterval(timer);
 }, []);
+const filteredHotspots =
+  sensorFilter === "ALL"
+    ? hotspots
+    : hotspots.filter((spot) => spot.sensor === sensorFilter);
 
   return (
     <main className="min-h-screen bg-[#05090c] text-white overflow-hidden">
@@ -166,6 +171,28 @@ className="relative min-h-[650px] overflow-hidden bg-[#030712]">
       MEDIUM
     </span>
   </div>
+  {/* Sensor filters */}
+<div className="absolute top-6 right-6 z-[1000] rounded-xl border border-cyan-500/20 bg-black/70 p-3 backdrop-blur">
+  <div className="mb-2 text-[10px] tracking-widest text-cyan-400">
+    SENSOR
+  </div>
+
+  <div className="flex gap-2">
+    {(["ALL", "VIIRS", "MODIS"] as const).map((sensor) => (
+      <button
+        key={sensor}
+        onClick={() => setSensorFilter(sensor)}
+        className={`rounded px-3 py-2 text-xs transition ${
+          sensorFilter === sensor
+            ? "bg-cyan-400 text-black"
+            : "border border-white/10 bg-white/5 text-slate-300 hover:bg-cyan-400/10"
+        }`}
+      >
+        {sensor}
+      </button>
+    ))}
+  </div>
+</div>
 {/* Time slider */}
 <div className="absolute bottom-20 left-1/2 z-[1000] w-[360px] -translate-x-1/2 rounded-xl border border-cyan-500/20 bg-black/70 p-4 backdrop-blur">
   <div className="mb-2 flex items-center justify-between text-xs">
@@ -191,6 +218,45 @@ className="relative min-h-[650px] overflow-hidden bg-[#030712]">
     <span>NOW</span>
   </div>
 </div>
+{/* Incident Cards */}
+<div className="absolute top-24 left-6 z-[1000] w-72 space-y-2">
+  <div className="text-[10px] tracking-[0.25em] text-cyan-400">
+    ACTIVE INCIDENTS
+  </div>
+
+  <div className="max-h-64 space-y-2 overflow-y-auto pr-1">
+    {filteredHotspots.map((spot) => (
+      <button
+        key={spot.id}
+        onClick={() => setSelected(spot)}
+        className="w-full rounded-lg border border-white/10 bg-black/70 p-3 text-left backdrop-blur transition hover:border-cyan-400/40"
+      >
+        <div className="flex items-center justify-between">
+          <span className="text-sm font-semibold text-white">
+            {spot.location}
+          </span>
+
+          <span
+            className={`text-[10px] font-bold ${
+              spot.intensity === "CRITICAL"
+                ? "text-red-400"
+                : spot.intensity === "HIGH"
+                ? "text-orange-400"
+                : "text-yellow-300"
+            }`}
+          >
+            {spot.intensity}
+          </span>
+        </div>
+
+        <div className="mt-1 flex justify-between text-[10px] text-slate-400">
+          <span>{spot.temp}</span>
+          <span>{spot.sensor}</span>
+        </div>
+      </button>
+    ))}
+  </div>
+</div>
   {/* Hotspot count */}
   <div className="absolute bottom-6 right-6 z-[1000] rounded border border-cyan-500/20 bg-black/70 px-4 py-3 text-xs backdrop-blur">
     <div className="text-slate-500">
@@ -198,7 +264,7 @@ className="relative min-h-[650px] overflow-hidden bg-[#030712]">
     </div>
 
     <div className="text-2xl font-bold text-cyan-300">
-      {hotspots.length}
+      {filteredHotspots.length}
     </div>
   </div>
 
