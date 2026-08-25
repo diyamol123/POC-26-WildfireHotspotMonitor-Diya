@@ -360,6 +360,21 @@ className="relative min-h-[650px] overflow-hidden bg-[#030712]">
       : "Moderate thermal activity should continue to be monitored for signs of escalation."}
   </p>
 </div>
+{/* WHO CONTROLS THE RAIL */}
+<div className="mt-6 rounded-xl border border-cyan-400/20 bg-cyan-400/5 p-4">
+  <div className="text-xs tracking-widest text-cyan-300">
+    WHO CONTROLS THE RAIL
+  </div>
+
+  <div className="mt-2 text-sm font-semibold text-white">
+    Rail Operations Control Center
+  </div>
+
+  <p className="mt-2 text-xs leading-5 text-slate-400">
+    Monitors the affected rail corridor and coordinates operational
+    decisions when wildfire risk approaches railway infrastructure.
+  </p>
+</div>
           <div className="mt-6">
             <div className="mb-3 text-xs tracking-widest text-slate-500">
               SYSTEM STATUS
