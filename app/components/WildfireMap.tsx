@@ -1,6 +1,13 @@
 "use client";
 
-import { MapContainer, TileLayer, CircleMarker, Tooltip } from "react-leaflet";
+import { useEffect, useRef } from "react";
+import {
+  MapContainer,
+  TileLayer,
+  CircleMarker,
+  Tooltip,
+  useMap,
+} from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 
 type Hotspot = {
@@ -10,6 +17,7 @@ type Hotspot = {
   intensity: "CRITICAL" | "HIGH" | "MEDIUM";
   location: string;
   temp: string;
+  sensor: "VIIRS" | "MODIS";
 };
 
 type WildfireMapProps = {
@@ -17,11 +25,38 @@ type WildfireMapProps = {
   onSelect: (spot: Hotspot) => void;
 };
 
-const intensityColors = {
+const intensityColors: Record<string, string> = {
   CRITICAL: "#ef4444",
   HIGH: "#fb923c",
   MEDIUM: "#fde047",
 };
+
+function MapCleanup() {
+  const map = useMap();
+  const mapRef = useRef(map);
+
+  useEffect(() => {
+    mapRef.current = map;
+
+    return () => {
+      const container = map.getContainer();
+
+      if (container) {
+        const leafletId = (container as HTMLElement & {
+          _leaflet_id?: number;
+        })._leaflet_id;
+
+        if (leafletId) {
+          delete (container as HTMLElement & {
+            _leaflet_id?: number;
+          })._leaflet_id;
+        }
+      }
+    };
+  }, [map]);
+
+  return null;
+}
 
 export default function WildfireMap({
   hotspots,
@@ -29,14 +64,15 @@ export default function WildfireMap({
 }: WildfireMapProps) {
   return (
     <MapContainer
-  key="wildfire-map"
-  center={[15.5, 78.5]}
-  zoom={5}
-  scrollWheelZoom={true}
-  className="absolute inset-0 z-0 h-full w-full"
->
+      center={[15.5, 78.5]}
+      zoom={5}
+      scrollWheelZoom={true}
+      className="absolute inset-0 z-0 h-full w-full"
+    >
+      <MapCleanup />
+
       <TileLayer
-        attribution='&copy; OpenStreetMap contributors'
+        attribution="&copy; OpenStreetMap contributors"
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
 
@@ -61,6 +97,8 @@ export default function WildfireMap({
             {spot.intensity}
             <br />
             {spot.temp}
+            <br />
+            Sensor: {spot.sensor}
           </Tooltip>
         </CircleMarker>
       ))}

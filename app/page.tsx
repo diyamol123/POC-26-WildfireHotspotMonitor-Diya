@@ -14,6 +14,7 @@ const hotspots: {
   intensity: "CRITICAL" | "HIGH" | "MEDIUM";
   location: string;
   temp: string;
+  sensor: "VIIRS" | "MODIS";
 }[] = [
   {
     id: 1,
@@ -22,6 +23,7 @@ const hotspots: {
     intensity: "HIGH",
     location: "Kerala",
     temp: "42°C",
+    sensor: "VIIRS",
   },
   {
     id: 2,
@@ -30,6 +32,7 @@ const hotspots: {
     intensity: "CRITICAL",
     location: "Tamil Nadu",
     temp: "46°C",
+    sensor: "MODIS",
   },
   {
     id: 3,
@@ -38,6 +41,7 @@ const hotspots: {
     intensity: "HIGH",
     location: "Karnataka",
     temp: "43°C",
+    sensor: "VIIRS",
   },
   {
     id: 4,
@@ -46,6 +50,7 @@ const hotspots: {
     intensity: "MEDIUM",
     location: "Andhra Pradesh",
     temp: "39°C",
+    sensor: "MODIS",
   },
   {
     id: 5,
@@ -54,6 +59,7 @@ const hotspots: {
     intensity: "CRITICAL",
     location: "Odisha",
     temp: "47°C",
+    sensor: "VIIRS",
   },
   {
     id: 6,
@@ -62,11 +68,12 @@ const hotspots: {
     intensity: "MEDIUM",
     location: "Telangana",
     temp: "40°C",
+    sensor: "MODIS",
   },
 ];
 
 export default function Home() {
-  const [selected, setSelected] = useState(hotspots[1]);
+  const [selected, setSelected] = useState<(typeof hotspots)[number]>(hotspots[1]);
   const [timeOffset, setTimeOffset] = useState(24);
   const [time, setTime] = useState<Date | null>(null);
   useEffect(() => {
