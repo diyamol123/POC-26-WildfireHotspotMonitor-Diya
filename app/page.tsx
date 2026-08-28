@@ -117,7 +117,7 @@ const exportSnapshot = async () => {
 };
 
 return (
-    <main className="min-h-screen bg-[#05090c] text-white overflow-hidden">
+    <main className="min-h-screen bg-[#05090c] text-white">
       {/* Header */}
       <header className="min-h-20 border-b border-cyan-500/20 bg-[#071116]/95 flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-6 md:px-10">
   <div>
@@ -151,18 +151,19 @@ return (
       {/* Dashboard */}
       <section
   ref={dashboardRef}
-  className="grid lg:grid-cols-[1fr_330px] min-h-[calc(100vh-5rem)]"
+  className="grid lg:grid-cols-[minmax(0,1fr)_380px] min-h-[calc(100vh-5rem)] items-start"
 >
         {/* Map */}
-<div 
-className="relative min-h-[650px] overflow-hidden bg-[#030712]">
+<div className="relative min-h-[650px] overflow-hidden bg-[#030712]">
 </div>
-  {/* Real geographic map */}
-  <WildfireMap
-    hotspots={hotspots}
-    onSelect={setSelected}
-  />
 
+{/* Real geographic map */}
+<WildfireMap
+  hotspots={hotspots}
+  onSelect={setSelected}
+/>
+
+  {/* keep ALL your map overlays here */}
   {/* Cinematic grid */}
   <div
     className="pointer-events-none absolute inset-0 z-[500] opacity-20"
@@ -317,7 +318,7 @@ className="relative min-h-[650px] overflow-hidden bg-[#030712]">
 </div>
 
         {/* Intelligence panel */}
-        <aside className="border-l border-cyan-500/20 bg-[#081116] p-6">
+        <aside className="relative z-[2000] h-auto min-h-full overflow-y-auto border-l border-cyan-500/20 bg-[#081116] p-6">
           <div className="mb-8">
             <div className="text-xs tracking-[0.3em] text-cyan-400">
               THREAT INTELLIGENCE
@@ -347,12 +348,13 @@ className="relative min-h-[650px] overflow-hidden bg-[#030712]">
               </div>
             </div>
           </div>
-<div className="mt-6 rounded-xl border border-amber-400/20 bg-amber-400/5 p-4">
-  <div className="text-xs tracking-widest text-amber-300">
+{/* WHY THIS MATTERS */}
+<div className="mt-4 rounded-xl border border-amber-400/30 bg-amber-400/10 p-4">
+  <div className="text-xs font-semibold tracking-widest text-amber-300">
     WHY THIS MATTERS
   </div>
 
-  <p className="mt-2 text-sm leading-6 text-slate-300">
+  <p className="mt-2 text-sm leading-5 text-slate-200">
     {selected.intensity === "CRITICAL"
       ? "High-intensity thermal activity may require rapid monitoring and response coordination."
       : selected.intensity === "HIGH"
@@ -360,9 +362,10 @@ className="relative min-h-[650px] overflow-hidden bg-[#030712]">
       : "Moderate thermal activity should continue to be monitored for signs of escalation."}
   </p>
 </div>
+
 {/* WHO CONTROLS THE RAIL */}
-<div className="mt-6 rounded-xl border border-cyan-400/20 bg-cyan-400/5 p-4">
-  <div className="text-xs tracking-widest text-cyan-300">
+<div className="mt-4 rounded-xl border border-cyan-400/30 bg-cyan-400/10 p-4">
+  <div className="text-xs font-semibold tracking-widest text-cyan-300">
     WHO CONTROLS THE RAIL
   </div>
 
@@ -370,7 +373,7 @@ className="relative min-h-[650px] overflow-hidden bg-[#030712]">
     Rail Operations Control Center
   </div>
 
-  <p className="mt-2 text-xs leading-5 text-slate-400">
+  <p className="mt-2 text-xs leading-5 text-slate-300">
     Monitors the affected rail corridor and coordinates operational
     decisions when wildfire risk approaches railway infrastructure.
   </p>
