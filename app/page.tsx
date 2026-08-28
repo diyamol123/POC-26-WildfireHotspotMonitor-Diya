@@ -87,16 +87,13 @@ const [sensorFilter, setSensorFilter] =
   useState<"ALL" | "VIIRS" | "MODIS">("ALL");
 const [time, setTime] = useState<Date | null>(null);
 const dashboardRef = useRef<HTMLElement | null>(null);
-  useEffect(() => {
-  setTime(new Date());
-
+useEffect(() => {
   const timer = setInterval(() => {
     setTime(new Date());
   }, 1000);
 
   return () => clearInterval(timer);
 }, []);
-
 const filteredHotspots =
   sensorFilter === "ALL"
     ? hotspots
