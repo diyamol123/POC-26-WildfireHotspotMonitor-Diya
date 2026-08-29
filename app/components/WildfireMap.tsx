@@ -6,6 +6,7 @@ import {
   CircleMarker,
   Tooltip,
 } from "react-leaflet";
+
 import "leaflet/dist/leaflet.css";
 
 type Hotspot = {
@@ -24,10 +25,13 @@ type WildfireMapProps = {
   onSelect: (spot: Hotspot) => void;
 };
 
-const intensityColors: Record<string, string> = {
+const intensityColors: Record<
+  Hotspot["intensity"],
+  string
+> = {
   CRITICAL: "#ef4444",
-  HIGH: "#fb923c",
-  MEDIUM: "#fde047",
+  HIGH: "#f97316",
+  MEDIUM: "#facc15",
 };
 
 export default function WildfireMap({
@@ -50,15 +54,20 @@ export default function WildfireMap({
       {hotspots.map((spot) => {
         const isSelected = spot.id === selectedId;
 
+        const intensityColor =
+          intensityColors[spot.intensity];
+
         return (
           <CircleMarker
             key={spot.id}
             center={[spot.lat, spot.lng]}
             radius={isSelected ? 12 : 8}
             pathOptions={{
-              color: intensityColors[spot.intensity],
-              fillColor: intensityColors[spot.intensity],
-              fillOpacity: isSelected ? 1 : 0.9,
+              color: isSelected
+                ? "#ffffff"
+                : intensityColor,
+              fillColor: intensityColor,
+              fillOpacity: isSelected ? 1 : 0.88,
               weight: isSelected ? 4 : 2,
             }}
             eventHandlers={{
@@ -73,8 +82,12 @@ export default function WildfireMap({
               {spot.temp}
               <br />
               Sensor: {spot.sensor}
-              <br />
-              {isSelected ? "SELECTED HOTSPOT" : "CLICK TO SELECT"}
+              {isSelected && (
+                <>
+                  <br />
+                  <strong>SELECTED HOTSPOT</strong>
+                </>
+              )}
             </Tooltip>
           </CircleMarker>
         );

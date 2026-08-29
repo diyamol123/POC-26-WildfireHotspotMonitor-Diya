@@ -1,8 +1,15 @@
 @import "tailwindcss";
 
 :root {
-  --background: #030712;
+  --background: #050505;
   --foreground: #f8fafc;
+
+  --ember: #f97316;
+  --ember-bright: #fb923c;
+  --fire-red: #ef4444;
+  --panel: #09090b;
+  --panel-soft: #11100f;
+  --border: rgba(249, 115, 22, 0.22);
 }
 
 @theme inline {
@@ -15,7 +22,18 @@
 html,
 body {
   min-height: 100%;
-  background: #030712;
+  background:
+    radial-gradient(
+      circle at 18% 18%,
+      rgba(249, 115, 22, 0.07),
+      transparent 28%
+    ),
+    radial-gradient(
+      circle at 82% 72%,
+      rgba(239, 68, 68, 0.05),
+      transparent 30%
+    ),
+    #050505;
   color: #f8fafc;
 }
 
@@ -23,12 +41,110 @@ body {
   margin: 0;
   font-family: Arial, Helvetica, sans-serif;
 }
+
 /* =========================================================
-   CINEMATIC WILDFIRE MAP
-   Slightly darken map tiles while preserving markers,
-   controls, labels and interactions.
+   EMBER GRID INTELLIGENCE
+   Cinematic wildfire visual language
 ========================================================= */
 
+.ember-shell {
+  background:
+    radial-gradient(
+      circle at 20% 20%,
+      rgba(249, 115, 22, 0.08),
+      transparent 32%
+    ),
+    radial-gradient(
+      circle at 80% 80%,
+      rgba(239, 68, 68, 0.05),
+      transparent 34%
+    ),
+    #050505;
+}
+
+.ember-panel {
+  background:
+    linear-gradient(
+      145deg,
+      rgba(249, 115, 22, 0.045),
+      rgba(9, 9, 11, 0.96) 38%,
+      rgba(3, 3, 3, 0.98)
+    );
+}
+
+/* Darken the geographic basemap without affecting
+   hotspot markers or dashboard controls. */
 .leaflet-tile-pane {
-  filter: brightness(0.78) saturate(0.85);
+  filter:
+    brightness(0.58)
+    contrast(1.08)
+    saturate(0.72);
+}
+
+/* Give the map a subtle warm cinematic atmosphere. */
+.ember-map-atmosphere {
+  background:
+    radial-gradient(
+      circle at 50% 50%,
+      transparent 0%,
+      rgba(0, 0, 0, 0.08) 45%,
+      rgba(0, 0, 0, 0.42) 100%
+    );
+}
+
+/* Ember grid */
+.ember-grid {
+  background-image:
+    linear-gradient(
+      rgba(249, 115, 22, 0.09) 1px,
+      transparent 1px
+    ),
+    linear-gradient(
+      90deg,
+      rgba(249, 115, 22, 0.09) 1px,
+      transparent 1px
+    );
+  background-size: 52px 52px;
+}
+
+/* Fire glow */
+.fire-glow {
+  box-shadow:
+    0 0 20px rgba(249, 115, 22, 0.16),
+    inset 0 0 20px rgba(249, 115, 22, 0.03);
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #050505;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(249, 115, 22, 0.35);
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(249, 115, 22, 0.6);
+}
+
+/* Leaflet controls */
+.leaflet-control-zoom a {
+  background: #09090b !important;
+  color: #fb923c !important;
+  border-color: rgba(249, 115, 22, 0.22) !important;
+}
+
+.leaflet-control-attribution {
+  background: rgba(5, 5, 5, 0.82) !important;
+  color: #71717a !important;
+}
+
+.leaflet-control-attribution a {
+  color: #fb923c !important;
 }
