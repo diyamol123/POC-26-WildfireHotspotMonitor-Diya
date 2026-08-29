@@ -156,7 +156,7 @@ return (
 
 {/* Real geographic map */}
 <WildfireMap
-  hotspots={hotspots}
+  hotspots={filteredHotspots}
   onSelect={setSelected}
 />
 
@@ -233,7 +233,7 @@ return (
 {/* Export AOI Snapshot */}
 <button
   onClick={exportSnapshot}
-  className="absolute bottom-6 right-6 z-[1000] rounded-lg border border-cyan-400/30 bg-black/80 px-4 py-3 text-xs font-semibold tracking-wider text-cyan-300 backdrop-blur transition hover:bg-cyan-400/20"
+  className="absolute bottom-6 left-6 z-[2000] rounded-lg border border-cyan-400/30 bg-black/90 px-4 py-3 text-xs font-semibold tracking-wider text-cyan-300 shadow-lg backdrop-blur transition hover:bg-cyan-400/20"
 >
   EXPORT AOI SNAPSHOT
 </button>
