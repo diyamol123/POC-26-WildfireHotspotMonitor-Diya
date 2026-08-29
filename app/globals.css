@@ -23,3 +23,12 @@ body {
   margin: 0;
   font-family: Arial, Helvetica, sans-serif;
 }
+/* =========================================================
+   CINEMATIC WILDFIRE MAP
+   Slightly darken map tiles while preserving markers,
+   controls, labels and interactions.
+========================================================= */
+
+.leaflet-tile-pane {
+  filter: brightness(0.78) saturate(0.85);
+}

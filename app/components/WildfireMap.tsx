@@ -20,6 +20,7 @@ type Hotspot = {
 
 type WildfireMapProps = {
   hotspots: Hotspot[];
+  selectedId?: number;
   onSelect: (spot: Hotspot) => void;
 };
 
@@ -31,6 +32,7 @@ const intensityColors: Record<string, string> = {
 
 export default function WildfireMap({
   hotspots,
+  selectedId,
   onSelect,
 }: WildfireMapProps) {
   return (
@@ -45,32 +47,38 @@ export default function WildfireMap({
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
 
-      {hotspots.map((spot) => (
-        <CircleMarker
-          key={spot.id}
-          center={[spot.lat, spot.lng]}
-          radius={8}
-          pathOptions={{
-            color: intensityColors[spot.intensity],
-            fillColor: intensityColors[spot.intensity],
-            fillOpacity: 0.9,
-            weight: 2,
-          }}
-          eventHandlers={{
-            click: () => onSelect(spot),
-          }}
-        >
-          <Tooltip>
-            <strong>{spot.location}</strong>
-            <br />
-            {spot.intensity}
-            <br />
-            {spot.temp}
-            <br />
-            Sensor: {spot.sensor}
-          </Tooltip>
-        </CircleMarker>
-      ))}
+      {hotspots.map((spot) => {
+        const isSelected = spot.id === selectedId;
+
+        return (
+          <CircleMarker
+            key={spot.id}
+            center={[spot.lat, spot.lng]}
+            radius={isSelected ? 12 : 8}
+            pathOptions={{
+              color: intensityColors[spot.intensity],
+              fillColor: intensityColors[spot.intensity],
+              fillOpacity: isSelected ? 1 : 0.9,
+              weight: isSelected ? 4 : 2,
+            }}
+            eventHandlers={{
+              click: () => onSelect(spot),
+            }}
+          >
+            <Tooltip>
+              <strong>{spot.location}</strong>
+              <br />
+              {spot.intensity}
+              <br />
+              {spot.temp}
+              <br />
+              Sensor: {spot.sensor}
+              <br />
+              {isSelected ? "SELECTED HOTSPOT" : "CLICK TO SELECT"}
+            </Tooltip>
+          </CircleMarker>
+        );
+      })}
     </MapContainer>
   );
 }
