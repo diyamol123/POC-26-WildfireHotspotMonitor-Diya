@@ -1,246 +1,491 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+
 import dynamic from "next/dynamic";
+
 import html2canvas from "html2canvas-pro";
 
+import type { Hotspot } from "./components/WildfireMap";
+
 const WildfireMap = dynamic(
-  () => import("./components/WildfireMap"),
+  () =>
+    import(
+      "./components/WildfireMap"
+    ),
   {
     ssr: false,
+
     loading: () => (
-      <div className="absolute inset-0 flex items-center justify-center bg-[#050505] text-orange-400">
-        Loading wildfire intelligence...
+      <div className="absolute inset-0 flex items-center justify-center bg-[#030712] text-cyan-400">
+        LOADING WILDFIRE INTELLIGENCE...
       </div>
     ),
   }
 );
 
-const hotspots: {
-  id: number;
-  lat: number;
-  lng: number;
-  intensity: "CRITICAL" | "HIGH" | "MEDIUM";
-  location: string;
-  temp: string;
-  sensor: "VIIRS" | "MODIS";
-}[] = [
-  {
-    id: 1,
-    lat: 10.8505,
-    lng: 76.2711,
-    intensity: "HIGH",
-    location: "Kerala",
-    temp: "42°C",
-    sensor: "VIIRS",
-  },
-  {
-    id: 2,
-    lat: 11.1271,
-    lng: 78.6569,
-    intensity: "CRITICAL",
-    location: "Tamil Nadu",
-    temp: "46°C",
-    sensor: "MODIS",
-  },
-  {
-    id: 3,
-    lat: 15.3173,
-    lng: 75.7139,
-    intensity: "HIGH",
-    location: "Karnataka",
-    temp: "43°C",
-    sensor: "VIIRS",
-  },
-  {
-    id: 4,
-    lat: 15.9129,
-    lng: 79.74,
-    intensity: "MEDIUM",
-    location: "Andhra Pradesh",
-    temp: "39°C",
-    sensor: "MODIS",
-  },
-  {
-    id: 5,
-    lat: 20.9517,
-    lng: 85.0985,
-    intensity: "CRITICAL",
-    location: "Odisha",
-    temp: "47°C",
-    sensor: "VIIRS",
-  },
-  {
-    id: 6,
-    lat: 17.1232,
-    lng: 79.2088,
-    intensity: "MEDIUM",
-    location: "Telangana",
-    temp: "40°C",
-    sensor: "MODIS",
-  },
-];
-
-type Hotspot = (typeof hotspots)[number];
+const API =
+  process.env.NEXT_PUBLIC_API_BASE_URL ||
+  "http://localhost:8000";
 
 export default function Home() {
-  const [selected, setSelected] =
-    useState<Hotspot>(hotspots[1]);
+  const [hotspots, setHotspots] =
+    useState<Hotspot[]>([]);
 
-  const [timeOffset, setTimeOffset] =
-    useState(24);
+  const [selected, setSelected] =
+    useState<Hotspot | null>(null);
 
   const [sensorFilter, setSensorFilter] =
-    useState<"ALL" | "VIIRS" | "MODIS">("ALL");
+    useState<
+      "ALL" | "VIIRS" | "MODIS"
+    >("ALL");
+    const [aoiBounds, setAoiBounds] = useState<
+  [[number, number], [number, number]] | null
+>(null);
 
-  const [time, setTime] =
+  const [timeOffset, setTimeOffset] =
+    useState(0);
+
+  const [systemTime, setSystemTime] =
     useState<Date | null>(null);
+
+  const [loading, setLoading] =
+    useState(true);
+
+  const [error, setError] =
+    useState<string | null>(null);
 
   const dashboardRef =
     useRef<HTMLElement | null>(null);
 
+  // =====================================================
+  // SYSTEM CLOCK
+  // =====================================================
+
   useEffect(() => {
+    setSystemTime(new Date());
+
     const timer = setInterval(() => {
-      setTime(new Date());
+      setSystemTime(new Date());
     }, 1000);
 
-    return () => clearInterval(timer);
+    return () => {
+      clearInterval(timer);
+    };
   }, []);
 
-  const filteredHotspots =
-    sensorFilter === "ALL"
-      ? hotspots
-      : hotspots.filter(
-          (spot) =>
-            spot.sensor === sensorFilter
+  // =====================================================
+  // LOAD NASA FIRMS DATA
+  // =====================================================
+
+  useEffect(() => {
+    const loadHotspots = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const response =
+          await fetch(
+            `${API}/api/hotspots`,
+            {
+              cache: "no-store",
+            }
+          );
+
+        if (!response.ok) {
+          throw new Error(
+            `API returned ${response.status}`
+          );
+        }
+
+        const data =
+          await response.json();
+
+        setHotspots(data);
+
+        if (data.length > 0) {
+          setSelected(data[0]);
+        }
+      } catch (err) {
+        console.error(
+          "Hotspot loading failed:",
+          err
         );
 
-  /*
-   * Keep the selected hotspot synchronized
-   * with the active sensor filter.
-   */
+        setError(
+          "Unable to connect to wildfire data service."
+        );
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadHotspots();
+  }, []);
+
+  // =====================================================
+  // SENSOR + TIME FILTER
+  // =====================================================
+
+  const filteredHotspots =
+    useMemo(() => {
+      const now = Date.now();
+
+      return hotspots.filter(
+        (spot) => {
+          // ---------------------------------------------
+          // SENSOR FILTER
+          // ---------------------------------------------
+
+          const matchesSensor =
+            sensorFilter === "ALL" ||
+            spot.sensor ===
+              sensorFilter;
+
+          if (!matchesSensor) {
+            return false;
+          }
+// ---------------------------------------------
+// AOI FILTER
+// ---------------------------------------------
+
+if (aoiBounds) {
+  const [[south, west], [north, east]] = aoiBounds;
+
+  const insideAOI =
+    spot.lat >= south &&
+    spot.lat <= north &&
+    spot.lng >= west &&
+    spot.lng <= east;
+
+  if (!insideAOI) {
+    return false;
+  }
+}
+          // ---------------------------------------------
+          // TIME FILTER
+          // ---------------------------------------------
+
+          if (
+            !spot.acq_date ||
+            !spot.acq_time
+          ) {
+            return true;
+          }
+
+          const timeText =
+            String(
+              spot.acq_time
+            ).padStart(4, "0");
+
+          const year =
+            spot.acq_date.slice(
+              0,
+              4
+            );
+
+          const month =
+            spot.acq_date.slice(
+              5,
+              7
+            );
+
+          const day =
+            spot.acq_date.slice(
+              8,
+              10
+            );
+
+          const hours =
+            timeText.slice(0, 2);
+
+          const minutes =
+            timeText.slice(2, 4);
+
+          const acquisitionTime =
+            Date.parse(
+              `${year}-${month}-${day}T${hours}:${minutes}:00Z`
+            );
+
+          if (
+            Number.isNaN(
+              acquisitionTime
+            )
+          ) {
+            return true;
+          }
+
+          const hoursAgo =
+            (now -
+              acquisitionTime) /
+            (1000 * 60 * 60);
+
+          // ---------------------------------------------
+          // NOW
+          // ---------------------------------------------
+
+          if (timeOffset === 0) {
+            return hoursAgo <= 1;
+          }
+
+          // ---------------------------------------------
+          // SLIDER WINDOW
+          // Example:
+          // 6H AGO = approximately 5-7 hours ago
+          // ---------------------------------------------
+
+          return (
+            hoursAgo >=
+              timeOffset - 1 &&
+            hoursAgo <=
+              timeOffset + 1
+          );
+        }
+      );
+        }, [
+      hotspots,
+      sensorFilter,
+      timeOffset,
+      aoiBounds,
+    ]);
+  // =====================================================
+  // KEEP SELECTED HOTSPOT VALID
+  // =====================================================
+
   useEffect(() => {
-    if (filteredHotspots.length === 0) {
+    if (
+      filteredHotspots.length === 0
+    ) {
+      setSelected(null);
       return;
     }
 
-    const selectedStillVisible =
+    const stillVisible =
+      selected &&
       filteredHotspots.some(
-        (spot) => spot.id === selected.id
+        (spot) =>
+          spot.id ===
+          selected.id
       );
 
-    if (!selectedStillVisible) {
-      setSelected(filteredHotspots[0]);
-    }
-  }, [sensorFilter, selected.id]);
-
-  const exportSnapshot = async () => {
-    if (!dashboardRef.current) return;
-
-    try {
-      const canvas = await html2canvas(
-        dashboardRef.current,
-        {
-          useCORS: true,
-          backgroundColor: "#050505",
-        }
-      );
-
-      const link =
-        document.createElement("a");
-
-      link.download =
-        "wildfire-aoi-snapshot.png";
-
-      link.href =
-        canvas.toDataURL("image/png");
-
-      link.click();
-    } catch (error) {
-      console.error(
-        "Failed to export snapshot:",
-        error
+    if (!stillVisible) {
+      setSelected(
+        filteredHotspots[0]
       );
     }
-  };
+  }, [
+    filteredHotspots,
+    selected,
+  ]);
 
-  const downloadSampleData = () => {
-    const data = JSON.stringify(
-      filteredHotspots,
-      null,
-      2
-    );
-
-    const blob = new Blob([data], {
-      type: "application/json",
-    });
-
-    const url =
-      URL.createObjectURL(blob);
-
-    const link =
-      document.createElement("a");
-
-    link.href = url;
-
-    link.download =
-      "wildfire-hotspots-sample.json";
-
-    document.body.appendChild(link);
-
-    link.click();
-
-    document.body.removeChild(link);
-
-    URL.revokeObjectURL(url);
-  };
+  // =====================================================
+  // THREAT METRICS
+  // =====================================================
 
   const criticalCount =
     filteredHotspots.filter(
       (spot) =>
-        spot.intensity === "CRITICAL"
+        spot.intensity ===
+        "CRITICAL"
     ).length;
 
   const highCount =
     filteredHotspots.filter(
       (spot) =>
-        spot.intensity === "HIGH"
+        spot.intensity ===
+        "HIGH"
     ).length;
 
-  return (
-    <main
-      className="ember-shell min-h-screen text-white"
-    >
-      {/* =====================================================
-          HEADER
-      ====================================================== */}
+  const mediumCount =
+    filteredHotspots.filter(
+      (spot) =>
+        spot.intensity ===
+        "MEDIUM"
+    ).length;
 
-      <header className="relative z-[3000] flex min-h-20 flex-col gap-3 border-b border-orange-500/20 bg-[#050505]/95 px-4 py-3 backdrop-blur sm:flex-row sm:items-center sm:justify-between sm:px-6 md:px-10">
+  // =====================================================
+  // EXPORT SNAPSHOT
+  // =====================================================
+
+  const exportSnapshot =
+    async () => {
+      if (!dashboardRef.current) {
+        return;
+      }
+
+      try {
+        const canvas =
+          await html2canvas(
+            dashboardRef.current,
+            {
+              useCORS: true,
+              backgroundColor:
+                "#030712",
+            }
+          );
+
+        const link =
+          document.createElement(
+            "a"
+          );
+
+        link.download =
+          "wildfire-aoi-snapshot.png";
+
+        link.href =
+          canvas.toDataURL(
+            "image/png"
+          );
+
+        link.click();
+      } catch (err) {
+        console.error(
+          "Snapshot export failed:",
+          err
+        );
+      }
+    };
+
+  // =====================================================
+  // DOWNLOAD DATA
+  // =====================================================
+
+  const downloadData =
+    () => {
+      const blob =
+        new Blob(
+          [
+            JSON.stringify(
+              filteredHotspots,
+              null,
+              2
+            ),
+          ],
+          {
+            type:
+              "application/json",
+          }
+        );
+
+      const url =
+        URL.createObjectURL(
+          blob
+        );
+
+      const link =
+        document.createElement(
+          "a"
+        );
+
+      link.href = url;
+
+      link.download =
+        "wildfire-hotspots.json";
+
+      link.click();
+
+      URL.revokeObjectURL(
+        url
+      );
+    };
+
+  // =====================================================
+  // WHY THIS MATTERS
+  // =====================================================
+
+  const whyThisMatters =
+    selected?.intensity ===
+    "CRITICAL"
+      ? "High-intensity thermal activity requires close monitoring because conditions may develop rapidly near critical infrastructure."
+      : selected?.intensity ===
+        "HIGH"
+      ? "Elevated thermal activity indicates a developing risk zone that should remain under close observation."
+      : "Moderate thermal activity should continue to be monitored for signs of escalation.";
+
+  // =====================================================
+  // UI
+  // =====================================================
+
+  return (
+    <main className="min-h-screen bg-[#030712] text-white">
+
+      {/* =================================================
+          HEADER
+      ================================================= */}
+
+      <header
+        className="
+          relative
+          z-[3000]
+          flex
+          min-h-20
+          flex-col
+          gap-3
+          border-b
+          border-[#1F2937]
+          bg-[#030712]/95
+          px-4
+          py-3
+          backdrop-blur
+          sm:flex-row
+          sm:items-center
+          sm:justify-between
+          sm:px-6
+          md:px-10
+        "
+      >
 
         <div>
-          <div className="text-xs tracking-[0.35em] text-orange-400">
+          <div
+            className="
+              text-xs
+              tracking-[0.35em]
+              text-[#38BDF8]
+            "
+          >
             REAL RAILS • POC 26
           </div>
 
-          <h1 className="mt-1 text-xl font-bold tracking-[0.08em] text-white md:text-2xl">
+          <h1
+            className="
+              mt-1
+              text-xl
+              font-bold
+              tracking-[0.08em]
+              md:text-2xl
+            "
+          >
             WILDFIRE HOTSPOT MONITOR
           </h1>
 
-          <div className="mt-1 text-[9px] tracking-[0.3em] text-zinc-600">
-            EMBER GRID INTELLIGENCE
+          <div
+            className="
+              mt-1
+              text-[9px]
+              tracking-[0.3em]
+              text-slate-500
+            "
+          >
+            REAL RAILS WILDFIRE INTELLIGENCE
           </div>
         </div>
 
         <div className="flex items-center gap-4">
 
           <div className="text-right">
-            <div className="text-xs text-zinc-600">
+
+            <div className="text-xs text-slate-500">
               SYSTEM TIME
             </div>
 
-            <div className="font-mono text-orange-300">
-              {time
-                ? time.toLocaleTimeString(
+            <div className="font-mono text-[#38BDF8]">
+              {systemTime
+                ? systemTime.toLocaleTimeString(
                     "en-IN",
                     {
                       hour12: false,
@@ -248,11 +493,27 @@ export default function Home() {
                   )
                 : "--:--:--"}
             </div>
+
           </div>
 
           <button
-            onClick={exportSnapshot}
-            className="w-full rounded-lg border border-orange-500/30 bg-orange-500/10 px-3 py-2 text-[10px] font-semibold tracking-wider text-orange-300 transition hover:bg-orange-500/20 sm:w-auto sm:px-4 sm:text-xs"
+            onClick={
+              exportSnapshot
+            }
+            className="
+              rounded-lg
+              border
+              border-[#38BDF8]/30
+              bg-[#38BDF8]/10
+              px-4
+              py-2
+              text-xs
+              font-semibold
+              tracking-wider
+              text-[#38BDF8]
+              transition
+              hover:bg-[#38BDF8]/20
+            "
           >
             EXPORT AOI SNAPSHOT
           </button>
@@ -260,184 +521,484 @@ export default function Home() {
         </div>
       </header>
 
-      {/* =====================================================
-          70 / 30 DASHBOARD
-      ====================================================== */}
+      {/* =================================================
+          DASHBOARD
+      ================================================= */}
 
       <section
         ref={dashboardRef}
-        className="grid min-h-[calc(100vh-5rem)] grid-cols-1 items-stretch lg:grid-cols-[70%_30%]"
+        className="
+          grid
+          min-h-[calc(100vh-5rem)]
+          grid-cols-1
+          lg:grid-cols-[70%_30%]
+        "
       >
 
-        {/* ===================================================
-            70% VISUALIZATION
-        ==================================================== */}
+        {/* =================================================
+            MAP
+        ================================================= */}
 
-        <div className="relative min-h-[650px] overflow-hidden bg-[#050505]">
+        <div
+          className="
+            relative
+            min-h-[650px]
+            overflow-hidden
+            bg-[#030712]
+          "
+        >
+
+          {/* LEAFLET MAP */}
 
           <WildfireMap
-            hotspots={filteredHotspots}
-            selectedId={selected.id}
-            onSelect={setSelected}
+  hotspots={filteredHotspots}
+  selectedId={selected?.id ?? null}
+  onSelect={setSelected}
+  onAOIChange={(bounds) => {
+    if (!bounds) {
+      setAoiBounds(null);
+      return;
+    }
+
+    if (Array.isArray(bounds)) {
+      setAoiBounds(
+        bounds as [[number, number], [number, number]]
+      );
+    }
+  }}
+/>
+
+{/* MAP ATMOSPHERE */}
+
+<div
+  className="
+    pointer-events-none
+    absolute
+    inset-0
+    z-[400]
+    bg-[radial-gradient(circle_at_center,transparent_0%,rgba(3,7,18,.08)_50%,rgba(3,7,18,.65)_100%)]
+  "
+>
+/</div>
+
+          {/* GRID */}
+
+          <div
+            className="
+              pointer-events-none
+              absolute
+              inset-0
+              z-[500]
+              opacity-20
+            "
+            style={{
+              backgroundImage:
+                "linear-gradient(rgba(56,189,248,.10) 1px, transparent 1px), linear-gradient(90deg, rgba(56,189,248,.10) 1px, transparent 1px)",
+              backgroundSize:
+                "50px 50px",
+            }}
           />
 
-          {/* Dark cinematic atmosphere */}
+          {/* RADAR */}
 
-          <div className="ember-map-atmosphere pointer-events-none absolute inset-0 z-[400]" />
+          <div
+            className="
+              pointer-events-none
+              absolute
+              left-1/2
+              top-1/2
+              z-[500]
+              -translate-x-1/2
+              -translate-y-1/2
+            "
+          >
 
-          {/* Ember grid */}
+            <div
+              className="
+                h-[420px]
+                w-[420px]
+                rounded-full
+                border
+                border-[#38BDF8]/10
+              "
+            />
 
-          <div className="ember-grid pointer-events-none absolute inset-0 z-[500] opacity-30" />
+            <div
+              className="
+                absolute
+                inset-[70px]
+                rounded-full
+                border
+                border-[#38BDF8]/10
+              "
+            />
 
-          {/* Top/bottom cinematic gradients */}
-
-          <div className="pointer-events-none absolute inset-x-0 top-0 z-[600] h-40 bg-gradient-to-b from-black/70 to-transparent" />
-
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[600] h-48 bg-gradient-to-t from-black/80 to-transparent" />
-
-          {/* Radar */}
-
-          <div className="pointer-events-none absolute left-1/2 top-1/2 z-[500] -translate-x-1/2 -translate-y-1/2">
-
-            <div className="h-[420px] w-[420px] rounded-full border border-orange-500/15" />
-
-            <div className="absolute inset-[70px] rounded-full border border-orange-500/15" />
-
-            <div className="absolute inset-[140px] rounded-full border border-orange-500/15" />
+            <div
+              className="
+                absolute
+                inset-[140px]
+                rounded-full
+                border
+                border-[#38BDF8]/10
+              "
+            />
 
           </div>
 
-          {/* Map label */}
+          {/* MAP LABEL */}
 
-          <div className="pointer-events-none absolute left-6 top-6 z-[1000] rounded border border-orange-500/25 bg-black/75 px-4 py-3 backdrop-blur">
+          <div
+            className="
+              pointer-events-none
+              absolute
+              left-6
+              top-6
+              z-[1000]
+              rounded
+              border
+              border-[#38BDF8]/20
+              bg-[#030712]/85
+              px-4
+              py-3
+              backdrop-blur
+            "
+          >
 
-            <div className="text-[10px] tracking-[0.25em] text-orange-400">
+            <div
+              className="
+                text-[10px]
+                tracking-[0.25em]
+                text-[#38BDF8]
+              "
+            >
               LIVE SATELLITE ANALYSIS
             </div>
 
-            <div className="mt-1 text-sm text-zinc-300">
+            <div
+              className="
+                mt-1
+                text-sm
+                text-slate-300
+              "
+            >
               SOUTH ASIA • ACTIVE MONITORING
             </div>
 
           </div>
 
-          {/* Sensor filters */}
+          {/* =================================================
+              SENSOR FILTER
+          ================================================= */}
 
-          <div className="absolute right-6 top-6 z-[2000] rounded-xl border border-orange-500/25 bg-black/80 p-3 backdrop-blur">
+          <div
+            className="
+              absolute
+              right-6
+              top-6
+              z-[2000]
+              rounded-xl
+              border
+              border-[#1F2937]
+              bg-[#030712]/90
+              p-3
+              backdrop-blur
+            "
+          >
 
-            <div className="mb-2 text-[10px] tracking-widest text-orange-400">
+            <div
+              className="
+                mb-2
+                text-[10px]
+                tracking-widest
+                text-[#38BDF8]
+              "
+            >
               SENSOR
             </div>
 
             <div className="flex gap-2">
 
               {(
-                ["ALL", "VIIRS", "MODIS"] as const
-              ).map((sensor) => (
-
-                <button
-                  key={sensor}
-                  onClick={() =>
-                    setSensorFilter(sensor)
-                  }
-                  className={`rounded px-3 py-2 text-xs transition ${
-                    sensorFilter === sensor
-                      ? "bg-orange-500 text-black"
-                      : "border border-white/10 bg-white/5 text-zinc-300 hover:border-orange-500/40 hover:bg-orange-500/10"
-                  }`}
-                >
-                  {sensor}
-                </button>
-
-              ))}
-
-            </div>
-          </div>
-
-          {/* Active incidents */}
-
-          <div className="absolute left-6 top-24 z-[1500] w-72 space-y-2">
-
-            <div className="text-[10px] tracking-[0.25em] text-orange-400">
-              ACTIVE INCIDENTS
-            </div>
-
-            <div className="max-h-[calc(100vh-15rem)] space-y-2 overflow-y-auto pr-1">
-
-              {filteredHotspots.map(
-                (spot) => (
+                [
+                  "ALL",
+                  "VIIRS",
+                  "MODIS",
+                ] as const
+              ).map(
+                (sensor) => (
 
                   <button
-                    key={spot.id}
+                    key={sensor}
                     onClick={() =>
-                      setSelected(spot)
+                      setSensorFilter(
+                        sensor
+                      )
                     }
-                    className={`fire-glow w-full rounded-lg border p-3 text-left backdrop-blur transition ${
-                      selected.id === spot.id
-                        ? "border-orange-400/70 bg-orange-500/10"
-                        : "border-white/10 bg-black/75 hover:border-orange-500/40"
-                    }`}
+                    className={`
+                      rounded
+                      px-3
+                      py-2
+                      text-xs
+                      transition
+                      ${
+                        sensorFilter ===
+                        sensor
+                          ? "bg-[#38BDF8] text-black"
+                          : "border border-[#1F2937] bg-white/5 text-slate-300 hover:bg-[#38BDF8]/10"
+                      }
+                    `}
                   >
-
-                    <div className="flex items-center justify-between">
-
-                      <span className="text-sm font-semibold text-white">
-                        {spot.location}
-                      </span>
-
-                      <span
-                        className={`text-[10px] font-bold ${
-                          spot.intensity ===
-                          "CRITICAL"
-                            ? "text-red-400"
-                            : spot.intensity ===
-                              "HIGH"
-                            ? "text-orange-400"
-                            : "text-yellow-300"
-                        }`}
-                      >
-                        {spot.intensity}
-                      </span>
-
-                    </div>
-
-                    <div className="mt-1 flex justify-between text-[10px] text-zinc-400">
-                      <span>
-                        {spot.temp}
-                      </span>
-
-                      <span>
-                        {spot.sensor}
-                      </span>
-                    </div>
-
-                    {selected.id ===
-                      spot.id && (
-                      <div className="mt-2 text-[9px] tracking-widest text-orange-300">
-                        SELECTED HOTSPOT
-                      </div>
-                    )}
-
+                    {sensor}
                   </button>
 
                 )
               )}
 
             </div>
+
           </div>
 
-          {/* Time window */}
+          {/* =================================================
+              ACTIVE INCIDENTS
+          ================================================= */}
 
-          <div className="absolute bottom-6 left-1/2 z-[2000] w-[360px] max-w-[calc(100%-2rem)] -translate-x-1/2 rounded-xl border border-orange-500/25 bg-black/80 p-4 backdrop-blur">
+          <div
+            className="
+              absolute
+              left-6
+              top-24
+              z-[1500]
+              w-72
+              max-w-[calc(100%-3rem)]
+            "
+          >
 
-            <div className="mb-2 flex items-center justify-between text-xs">
+            <div
+              className="
+                mb-2
+                text-[10px]
+                tracking-[0.25em]
+                text-[#38BDF8]
+              "
+            >
+              ACTIVE INCIDENTS
+            </div>
 
-              <span className="tracking-widest text-orange-400">
+            <div
+              className="
+                max-h-[calc(100vh-18rem)]
+                space-y-2
+                overflow-y-auto
+                pr-1
+              "
+            >
+
+              {/* LOADING */}
+
+              {loading && (
+                <div
+                  className="
+                    rounded-lg
+                    border
+                    border-[#1F2937]
+                    bg-[#0B1117]/90
+                    p-4
+                    text-xs
+                    text-slate-400
+                  "
+                >
+                  Loading NASA FIRMS observations...
+                </div>
+              )}
+
+              {/* ERROR */}
+
+              {error && (
+                <div
+                  className="
+                    rounded-lg
+                    border
+                    border-red-500/30
+                    bg-red-500/10
+                    p-4
+                    text-xs
+                    text-red-300
+                  "
+                >
+                  {error}
+                </div>
+              )}
+
+              {/* HOTSPOTS */}
+
+              {!loading &&
+                !error &&
+                filteredHotspots.map(
+                  (spot) => (
+
+                    <button
+                      key={spot.id}
+                      onClick={() =>
+                        setSelected(
+                          spot
+                        )
+                      }
+                      className={`
+                        w-full
+                        rounded-lg
+                        border
+                        p-3
+                        text-left
+                        backdrop-blur
+                        transition
+                        ${
+                          selected?.id ===
+                          spot.id
+                            ? "border-[#38BDF8]/70 bg-[#38BDF8]/10 shadow-[0_0_20px_rgba(56,189,248,.10)]"
+                            : "border-[#1F2937] bg-[#0B1117]/90 hover:border-[#38BDF8]/40"
+                        }
+                      `}
+                    >
+
+                      <div
+                        className="
+                          flex
+                          items-center
+                          justify-between
+                        "
+                      >
+
+                        <span
+                          className="
+                            text-sm
+                            font-semibold
+                            text-white
+                          "
+                        >
+                          {spot.location}
+                        </span>
+
+                        <span
+                          className={`
+                            text-[10px]
+                            font-bold
+                            ${
+                              spot.intensity ===
+                              "CRITICAL"
+                                ? "text-red-400"
+                                : spot.intensity ===
+                                  "HIGH"
+                                ? "text-orange-400"
+                                : "text-yellow-300"
+                            }
+                          `}
+                        >
+                          {spot.intensity}
+                        </span>
+
+                      </div>
+
+                      <div
+                        className="
+                          mt-1
+                          flex
+                          justify-between
+                          text-[10px]
+                          text-slate-500
+                        "
+                      >
+
+                        <span>
+                          {spot.temp}
+                        </span>
+
+                        <span>
+                          {spot.sensor}
+                        </span>
+
+                      </div>
+
+                    </button>
+
+                  )
+                )}
+
+              {/* EMPTY */}
+
+              {!loading &&
+                !error &&
+                filteredHotspots.length ===
+                  0 && (
+                  <div
+                    className="
+                      rounded-lg
+                      border
+                      border-[#1F2937]
+                      bg-[#0B1117]/90
+                      p-4
+                      text-xs
+                      text-slate-500
+                    "
+                  >
+                    No hotspots found for
+                    this sensor/time
+                    window.
+                  </div>
+                )}
+
+            </div>
+
+          </div>
+
+          {/* =================================================
+              TIME WINDOW
+          ================================================= */}
+
+          <div
+            className="
+              absolute
+              bottom-6
+              left-1/2
+              z-[2000]
+              w-[380px]
+              max-w-[calc(100%-2rem)]
+              -translate-x-1/2
+              rounded-xl
+              border
+              border-[#1F2937]
+              bg-[#030712]/90
+              p-4
+              backdrop-blur
+            "
+          >
+
+            <div
+              className="
+                mb-2
+                flex
+                items-center
+                justify-between
+                text-xs
+              "
+            >
+
+              <span
+                className="
+                  tracking-widest
+                  text-[#38BDF8]
+                "
+              >
                 TIME WINDOW
               </span>
 
-              <span className="font-mono text-zinc-300">
-                {timeOffset === 24
+              <span
+                className="
+                  font-mono
+                  text-slate-300
+                "
+              >
+                {timeOffset ===
+                0
                   ? "NOW"
                   : `${timeOffset}H AGO`}
               </span>
@@ -448,26 +1009,68 @@ export default function Home() {
               type="range"
               min="0"
               max="24"
-              value={timeOffset}
+              value={
+                timeOffset
+              }
               onChange={(event) =>
                 setTimeOffset(
-                  Number(event.target.value)
+                  Number(
+                    event.target.value
+                  )
                 )
               }
-              className="w-full accent-orange-500"
+              className="
+                w-full
+                accent-[#38BDF8]
+              "
               aria-label="Wildfire observation time"
             />
 
-            <div className="mt-1 flex justify-between text-[10px] text-zinc-600">
-              <span>24H AGO</span>
-              <span>NOW</span>
+            <div
+              className="
+                mt-1
+                flex
+                justify-between
+                text-[10px]
+                text-slate-600
+              "
+            >
+
+              <span>
+                NOW
+              </span>
+
+              <span>
+                24H AGO
+              </span>
+
             </div>
 
           </div>
 
-          {/* Legend */}
+          {/* =================================================
+              LEGEND
+          ================================================= */}
 
-          <div className="pointer-events-none absolute bottom-6 left-6 z-[2000] flex gap-5 rounded border border-white/10 bg-black/80 px-4 py-3 text-xs backdrop-blur">
+          <div
+            className="
+              pointer-events-none
+              absolute
+              bottom-6
+              left-6
+              z-[2000]
+              flex
+              gap-5
+              rounded
+              border
+              border-[#1F2937]
+              bg-[#030712]/90
+              px-4
+              py-3
+              text-xs
+              backdrop-blur
+            "
+          >
 
             <span>
               <i className="mr-2 inline-block h-2 w-2 rounded-full bg-red-500" />
@@ -486,24 +1089,38 @@ export default function Home() {
 
           </div>
 
-          {/* Export */}
+          {/* =================================================
+              HOTSPOT COUNT
+          ================================================= */}
 
-          <button
-            onClick={exportSnapshot}
-            className="absolute bottom-24 left-6 z-[2500] rounded-lg border border-orange-500/30 bg-black/90 px-4 py-3 text-xs font-semibold tracking-wider text-orange-300 shadow-lg backdrop-blur transition hover:bg-orange-500/20"
+          <div
+            className="
+              absolute
+              bottom-6
+              right-6
+              z-[2000]
+              rounded
+              border
+              border-[#1F2937]
+              bg-[#030712]/90
+              px-4
+              py-3
+              text-xs
+              backdrop-blur
+            "
           >
-            EXPORT AOI SNAPSHOT
-          </button>
 
-          {/* Hotspot count */}
-
-          <div className="absolute bottom-6 right-6 z-[2000] rounded border border-orange-500/25 bg-black/80 px-4 py-3 text-xs backdrop-blur">
-
-            <div className="text-zinc-600">
+            <div className="text-slate-500">
               HOTSPOTS DETECTED
             </div>
 
-            <div className="text-2xl font-bold text-orange-300">
+            <div
+              className="
+                text-2xl
+                font-bold
+                text-[#38BDF8]
+              "
+            >
               {filteredHotspots.length}
             </div>
 
@@ -511,146 +1128,334 @@ export default function Home() {
 
         </div>
 
-        {/* ===================================================
-            30% INTELLIGENCE
-        ==================================================== */}
+        {/* =================================================
+            INTELLIGENCE SIDEBAR
+        ================================================= */}
 
-        <aside className="relative z-[3000] min-h-[650px] overflow-y-auto border-l border-orange-500/20 bg-[#080808] p-6">
+        <aside
+          className="
+            relative
+            z-[3000]
+            min-h-[650px]
+            overflow-y-auto
+            border-l
+            border-[#1F2937]
+            bg-[#0B1117]
+            p-6
+          "
+        >
 
           <div className="mb-8">
 
-            <div className="text-xs tracking-[0.3em] text-orange-400">
+            <div
+              className="
+                text-xs
+                tracking-[0.3em]
+                text-[#38BDF8]
+              "
+            >
               THREAT INTELLIGENCE
             </div>
 
-            <h2 className="mt-2 text-xl font-semibold text-white">
+            <h2
+              className="
+                mt-2
+                text-xl
+                font-semibold
+              "
+            >
               Active Hotspot
             </h2>
 
           </div>
 
-          {/* Selected hotspot */}
+          {/* SELECTED HOTSPOT */}
 
-          <div className="rounded-xl border border-red-500/30 bg-red-500/5 p-5">
+          {selected ? (
 
-            <div className="text-xs text-zinc-600">
-              SELECTED REGION
-            </div>
+            <div
+              className="
+                rounded-xl
+                border
+                border-[#38BDF8]/20
+                bg-[#38BDF8]/5
+                p-5
+              "
+            >
 
-            <div className="mt-1 text-2xl font-bold text-white">
-              {selected.location}
-            </div>
+              <div
+                className="
+                  text-xs
+                  text-slate-500
+                "
+              >
+                SELECTED REGION
+              </div>
 
-            <div className="mt-6 grid grid-cols-2 gap-3">
+              <div
+                className="
+                  mt-1
+                  text-2xl
+                  font-bold
+                "
+              >
+                {selected.location}
+              </div>
 
-              <div className="rounded-lg bg-black/40 p-3">
+              <div
+                className="
+                  mt-6
+                  grid
+                  grid-cols-2
+                  gap-3
+                "
+              >
 
-                <div className="text-[10px] text-zinc-600">
-                  INTENSITY
+                <div
+                  className="
+                    rounded-lg
+                    bg-black/30
+                    p-3
+                  "
+                >
+
+                  <div
+                    className="
+                      text-[10px]
+                      text-slate-500
+                    "
+                  >
+                    INTENSITY
+                  </div>
+
+                  <div
+                    className={`
+                      mt-1
+                      ${
+                        selected.intensity ===
+                        "CRITICAL"
+                          ? "text-red-400"
+                          : selected.intensity ===
+                            "HIGH"
+                          ? "text-orange-400"
+                          : "text-yellow-300"
+                      }
+                    `}
+                  >
+                    {selected.intensity}
+                  </div>
+
                 </div>
 
                 <div
-                  className={`mt-1 ${
-                    selected.intensity ===
-                    "CRITICAL"
-                      ? "text-red-400"
-                      : selected.intensity ===
-                        "HIGH"
-                      ? "text-orange-400"
-                      : "text-yellow-300"
-                  }`}
+                  className="
+                    rounded-lg
+                    bg-black/30
+                    p-3
+                  "
                 >
-                  {selected.intensity}
-                </div>
 
-              </div>
+                  <div
+                    className="
+                      text-[10px]
+                      text-slate-500
+                    "
+                  >
+                    TEMP
+                  </div>
 
-              <div className="rounded-lg bg-black/40 p-3">
+                  <div
+                    className="
+                      mt-1
+                      text-white
+                    "
+                  >
+                    {selected.temp}
+                  </div>
 
-                <div className="text-[10px] text-zinc-600">
-                  TEMP
-                </div>
-
-                <div className="mt-1 text-white">
-                  {selected.temp}
                 </div>
 
               </div>
 
             </div>
 
-          </div>
+          ) : (
 
-          {/* Intelligence metrics */}
+            <div
+              className="
+                rounded-xl
+                border
+                border-[#1F2937]
+                bg-[#030712]
+                p-5
+                text-sm
+                text-slate-500
+              "
+            >
+              No hotspot selected.
+            </div>
 
-          <div className="mt-4 grid grid-cols-2 gap-3">
+          )}
 
-            <div className="rounded-xl border border-orange-500/20 bg-orange-500/5 p-4">
+          {/* METRICS */}
 
-              <div className="text-[10px] tracking-widest text-orange-400">
+          <div
+            className="
+              mt-4
+              grid
+              grid-cols-2
+              gap-3
+            "
+          >
+
+            <div
+              className="
+                rounded-xl
+                border
+                border-[#1F2937]
+                bg-[#030712]
+                p-4
+              "
+            >
+
+              <div
+                className="
+                  text-[10px]
+                  tracking-widest
+                  text-[#38BDF8]
+                "
+              >
                 ACTIVE HOTSPOTS
               </div>
 
-              <div className="mt-2 text-2xl font-bold text-orange-300">
+              <div
+                className="
+                  mt-2
+                  text-2xl
+                  font-bold
+                "
+              >
                 {filteredHotspots.length}
-              </div>
-
-              <div className="mt-1 text-[10px] text-zinc-600">
-                CURRENTLY DETECTED
               </div>
 
             </div>
 
-            <div className="rounded-xl border border-orange-500/20 bg-orange-500/5 p-4">
+            <div
+              className="
+                rounded-xl
+                border
+                border-[#1F2937]
+                bg-[#030712]
+                p-4
+              "
+            >
 
-              <div className="text-[10px] tracking-widest text-orange-400">
+              <div
+                className="
+                  text-[10px]
+                  tracking-widest
+                  text-[#38BDF8]
+                "
+              >
                 SENSOR SOURCE
               </div>
 
-              <div className="mt-2 text-lg font-bold text-white">
-                {selected.sensor}
-              </div>
-
-              <div className="mt-1 text-[10px] text-zinc-600">
-                SELECTED HOTSPOT
+              <div
+                className="
+                  mt-2
+                  text-lg
+                  font-bold
+                "
+              >
+                {selected?.sensor ??
+                  "—"}
               </div>
 
             </div>
 
           </div>
 
-          {/* Threat distribution */}
+          {/* THREAT DISTRIBUTION */}
 
-          <div className="mt-4 rounded-xl border border-white/10 bg-white/[0.02] p-4">
+          <div
+            className="
+              mt-4
+              rounded-xl
+              border
+              border-[#1F2937]
+              bg-[#030712]
+              p-4
+            "
+          >
 
-            <div className="mb-3 text-[10px] tracking-widest text-zinc-600">
+            <div
+              className="
+                mb-3
+                text-[10px]
+                tracking-widest
+                text-slate-500
+              "
+            >
               THREAT DISTRIBUTION
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div
+              className="
+                grid
+                grid-cols-3
+                gap-3
+              "
+            >
 
               <div>
-
-                <div className="text-[10px] text-zinc-600">
+                <div className="text-[10px] text-slate-500">
                   CRITICAL
                 </div>
 
-                <div className="mt-1 text-lg font-bold text-red-400">
+                <div
+                  className="
+                    mt-1
+                    text-lg
+                    font-bold
+                    text-red-400
+                  "
+                >
                   {criticalCount}
                 </div>
-
               </div>
 
               <div>
-
-                <div className="text-[10px] text-zinc-600">
+                <div className="text-[10px] text-slate-500">
                   HIGH
                 </div>
 
-                <div className="mt-1 text-lg font-bold text-orange-400">
+                <div
+                  className="
+                    mt-1
+                    text-lg
+                    font-bold
+                    text-orange-400
+                  "
+                >
                   {highCount}
                 </div>
+              </div>
 
+              <div>
+                <div className="text-[10px] text-slate-500">
+                  MEDIUM
+                </div>
+
+                <div
+                  className="
+                    mt-1
+                    text-lg
+                    font-bold
+                    text-yellow-300
+                  "
+                >
+                  {mediumCount}
+                </div>
               </div>
 
             </div>
@@ -659,41 +1464,87 @@ export default function Home() {
 
           {/* WHY THIS MATTERS */}
 
-          <div className="mt-4 rounded-xl border border-orange-500/30 bg-orange-500/10 p-4">
+          <div
+            className="
+              mt-4
+              rounded-xl
+              border
+              border-[#38BDF8]/20
+              bg-[#38BDF8]/5
+              p-4
+            "
+          >
 
-            <div className="text-xs font-semibold tracking-widest text-orange-300">
+            <div
+              className="
+                text-xs
+                font-semibold
+                tracking-widest
+                text-[#38BDF8]
+              "
+            >
               WHY THIS MATTERS
             </div>
 
-            <p className="mt-2 text-sm leading-5 text-zinc-200">
-
-              {selected.intensity ===
-              "CRITICAL"
-                ? "High-intensity thermal activity may require rapid monitoring and response coordination."
-                : selected.intensity ===
-                  "HIGH"
-                ? "Elevated thermal activity indicates a developing fire risk that should remain under close observation."
-                : "Moderate thermal activity should continue to be monitored for signs of escalation."}
-
+            <p
+              className="
+                mt-2
+                text-sm
+                leading-5
+                text-slate-300
+              "
+            >
+              {selected
+                ? whyThisMatters
+                : "Select a hotspot to generate an operational wildfire intelligence insight."}
             </p>
 
           </div>
 
           {/* WHO CONTROLS THE RAIL */}
 
-          <div className="mt-4 rounded-xl border border-orange-500/25 bg-orange-500/5 p-4">
+          <div
+            className="
+              mt-4
+              rounded-xl
+              border
+              border-[#1F2937]
+              bg-[#030712]
+              p-4
+            "
+          >
 
-            <div className="text-xs font-semibold tracking-widest text-orange-300">
+            <div
+              className="
+                text-xs
+                font-semibold
+                tracking-widest
+                text-[#38BDF8]
+              "
+            >
               WHO CONTROLS THE RAIL
             </div>
 
-            <div className="mt-2 text-sm font-semibold text-white">
+            <div
+              className="
+                mt-2
+                text-sm
+                font-semibold
+              "
+            >
               Rail Operations Control Center
             </div>
 
-            <p className="mt-2 text-xs leading-5 text-zinc-400">
-              Monitors the affected rail
-              corridor and coordinates
+            <p
+              className="
+                mt-2
+                text-xs
+                leading-5
+                text-slate-400
+              "
+            >
+              Monitors affected rail
+              corridors and coordinates
               operational decisions when
               wildfire risk approaches
               railway infrastructure.
@@ -703,22 +1554,42 @@ export default function Home() {
 
           {/* DOWNLOAD */}
 
-          <div className="mt-4">
-
-            <button
-              onClick={downloadSampleData}
-              className="w-full rounded-lg border border-orange-500/30 bg-orange-500/10 px-4 py-3 text-xs font-semibold tracking-wider text-orange-300 transition hover:bg-orange-500/20"
-            >
-              DOWNLOAD SAMPLE DATA
-            </button>
-
-          </div>
+          <button
+            onClick={
+              downloadData
+            }
+            className="
+              mt-4
+              w-full
+              rounded-lg
+              border
+              border-[#38BDF8]/30
+              bg-[#38BDF8]/10
+              px-4
+              py-3
+              text-xs
+              font-semibold
+              tracking-wider
+              text-[#38BDF8]
+              transition
+              hover:bg-[#38BDF8]/20
+            "
+          >
+            DOWNLOAD SAMPLE DATA
+          </button>
 
           {/* SYSTEM STATUS */}
 
           <div className="mt-6">
 
-            <div className="mb-3 text-xs tracking-widest text-zinc-600">
+            <div
+              className="
+                mb-3
+                text-xs
+                tracking-widest
+                text-slate-500
+              "
+            >
               SYSTEM STATUS
             </div>
 
@@ -726,17 +1597,27 @@ export default function Home() {
 
               {[
                 [
-                  "Satellite feed",
-                  "ONLINE",
+                  "NASA FIRMS feed",
+                  loading
+                    ? "LOADING"
+                    : error
+                    ? "ERROR"
+                    : "ONLINE",
                 ],
+
                 [
                   "Hotspot detection",
-                  "ACTIVE",
+                  filteredHotspots.length >
+                  0
+                    ? "ACTIVE"
+                    : "WAITING",
                 ],
+
                 [
                   "Risk engine",
                   "RUNNING",
                 ],
+
                 [
                   "Data pipeline",
                   "STABLE",
@@ -746,14 +1627,31 @@ export default function Home() {
 
                   <div
                     key={label}
-                    className="flex items-center justify-between border-b border-white/5 pb-3"
+                    className="
+                      flex
+                      items-center
+                      justify-between
+                      border-b
+                      border-white/5
+                      pb-3
+                    "
                   >
 
-                    <span className="text-sm text-zinc-500">
+                    <span
+                      className="
+                        text-sm
+                        text-slate-500
+                      "
+                    >
                       {label}
                     </span>
 
-                    <span className="text-xs text-emerald-400">
+                    <span
+                      className="
+                        text-xs
+                        text-emerald-400
+                      "
+                    >
                       ● {status}
                     </span>
 
@@ -766,17 +1664,37 @@ export default function Home() {
 
           </div>
 
-          {/* Last update */}
+          {/* LAST UPDATE */}
 
-          <div className="mt-8 rounded-xl border border-orange-500/20 bg-orange-500/5 p-4">
+          <div
+            className="
+              mt-8
+              rounded-xl
+              border
+              border-[#1F2937]
+              bg-[#030712]
+              p-4
+            "
+          >
 
-            <div className="text-xs text-orange-400">
+            <div
+              className="
+                text-xs
+                text-[#38BDF8]
+              "
+            >
               LAST UPDATE
             </div>
 
-            <div className="mt-1 font-mono text-sm text-white">
-              {time
-                ? time.toLocaleTimeString(
+            <div
+              className="
+                mt-1
+                font-mono
+                text-sm
+              "
+            >
+              {systemTime
+                ? systemTime.toLocaleTimeString(
                     "en-IN",
                     {
                       hour12: false,
@@ -785,9 +1703,16 @@ export default function Home() {
                 : "--:--:--"}
             </div>
 
-            <div className="mt-2 text-xs text-zinc-600">
-              Monitoring network is receiving
-              live-style telemetry.
+            <div
+              className="
+                mt-2
+                text-xs
+                text-slate-500
+              "
+            >
+              Monitoring network is
+              receiving satellite-derived
+              hotspot observations.
             </div>
 
           </div>
@@ -795,6 +1720,7 @@ export default function Home() {
         </aside>
 
       </section>
+
     </main>
   );
 }

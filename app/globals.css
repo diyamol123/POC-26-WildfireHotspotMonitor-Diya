@@ -1,150 +1,244 @@
 @import "tailwindcss";
 
 :root {
-  --background: #050505;
+  --background: #030712;
   --foreground: #f8fafc;
 
-  --ember: #f97316;
-  --ember-bright: #fb923c;
-  --fire-red: #ef4444;
-  --panel: #09090b;
-  --panel-soft: #11100f;
-  --border: rgba(249, 115, 22, 0.22);
+  --cyan: #38bdf8;
+  --indigo: #818cf8;
+
+  --surface: #0b1117;
+  --surface-soft: #111827;
+
+  --border: #1f2937;
+  --muted: #64748b;
+
+  --critical: #ef4444;
+  --high: #f97316;
+  --medium: #facc15;
+  --success: #34d399;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
+/* =====================================================
+   BASE
+===================================================== */
+
 html,
 body {
   min-height: 100%;
-  background:
-    radial-gradient(
-      circle at 18% 18%,
-      rgba(249, 115, 22, 0.07),
-      transparent 28%
-    ),
-    radial-gradient(
-      circle at 82% 72%,
-      rgba(239, 68, 68, 0.05),
-      transparent 30%
-    ),
-    #050505;
+  margin: 0;
+  padding: 0;
+
+  background: #030712;
   color: #f8fafc;
+
+  font-family:
+    var(--font-geist-sans),
+    Arial,
+    Helvetica,
+    sans-serif;
 }
 
 body {
-  margin: 0;
-  font-family: Arial, Helvetica, sans-serif;
+  overflow-x: hidden;
 }
 
-/* =========================================================
-   EMBER GRID INTELLIGENCE
-   Cinematic wildfire visual language
-========================================================= */
-
-.ember-shell {
-  background:
-    radial-gradient(
-      circle at 20% 20%,
-      rgba(249, 115, 22, 0.08),
-      transparent 32%
-    ),
-    radial-gradient(
-      circle at 80% 80%,
-      rgba(239, 68, 68, 0.05),
-      transparent 34%
-    ),
-    #050505;
+* {
+  box-sizing: border-box;
 }
 
-.ember-panel {
-  background:
-    linear-gradient(
-      145deg,
-      rgba(249, 115, 22, 0.045),
-      rgba(9, 9, 11, 0.96) 38%,
-      rgba(3, 3, 3, 0.98)
-    );
+/* =====================================================
+   REAL RAILS INTELLIGENCE PLATFORM
+===================================================== */
+
+main {
+  min-height: 100vh;
+  background: #030712;
+  color: #f8fafc;
 }
 
-/* Darken the geographic basemap without affecting
-   hotspot markers or dashboard controls. */
+/* =====================================================
+   LEAFLET MAP
+===================================================== */
+
+.leaflet-container {
+  width: 100%;
+  height: 100%;
+
+  background: #030712;
+
+  font-family:
+    var(--font-geist-sans),
+    Arial,
+    Helvetica,
+    sans-serif;
+}
+
+/*
+   Keep the geographic map visible while giving it
+   the darker intelligence-dashboard appearance.
+*/
+
 .leaflet-tile-pane {
   filter:
-    brightness(0.58)
+    brightness(0.62)
     contrast(1.08)
     saturate(0.72);
 }
 
-/* Give the map a subtle warm cinematic atmosphere. */
-.ember-map-atmosphere {
-  background:
-    radial-gradient(
-      circle at 50% 50%,
-      transparent 0%,
-      rgba(0, 0, 0, 0.08) 45%,
-      rgba(0, 0, 0, 0.42) 100%
-    );
+/* =====================================================
+   LEAFLET CONTROLS
+===================================================== */
+
+.leaflet-control-zoom {
+  border: 1px solid #1f2937 !important;
+  box-shadow: none !important;
 }
 
-/* Ember grid */
-.ember-grid {
-  background-image:
-    linear-gradient(
-      rgba(249, 115, 22, 0.09) 1px,
-      transparent 1px
-    ),
-    linear-gradient(
-      90deg,
-      rgba(249, 115, 22, 0.09) 1px,
-      transparent 1px
-    );
-  background-size: 52px 52px;
+.leaflet-control-zoom a {
+  width: 32px !important;
+  height: 32px !important;
+
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+
+  background: #0b1117 !important;
+  color: #38bdf8 !important;
+
+  border: 0 !important;
+
+  font-weight: 600;
 }
 
-/* Fire glow */
-.fire-glow {
+.leaflet-control-zoom a:hover {
+  background: #111827 !important;
+  color: #38bdf8 !important;
+}
+
+/* =====================================================
+   MAP ATTRIBUTION
+===================================================== */
+
+.leaflet-control-attribution {
+  background: rgba(3, 7, 18, 0.88) !important;
+
+  color: #64748b !important;
+
+  border: 1px solid rgba(31, 41, 55, 0.7);
+}
+
+.leaflet-control-attribution a {
+  color: #38bdf8 !important;
+}
+
+/* =====================================================
+   TOOLTIPS
+===================================================== */
+
+.leaflet-tooltip {
+  background: #0b1117 !important;
+
+  color: #f8fafc !important;
+
+  border: 1px solid #1f2937 !important;
+
+  border-radius: 6px !important;
+
   box-shadow:
-    0 0 20px rgba(249, 115, 22, 0.16),
-    inset 0 0 20px rgba(249, 115, 22, 0.03);
+    0 0 16px rgba(56, 189, 248, 0.12) !important;
+
+  font-family:
+    var(--font-geist-sans),
+    Arial,
+    Helvetica,
+    sans-serif;
 }
 
-/* Custom scrollbar */
+.leaflet-tooltip::before {
+  border-top-color: #0b1117 !important;
+}
+
+/* =====================================================
+   MAP POPUPS
+===================================================== */
+
+.leaflet-popup-content-wrapper,
+.leaflet-popup-tip {
+  background: #0b1117 !important;
+  color: #f8fafc !important;
+
+  border: 1px solid #1f2937 !important;
+}
+
+.leaflet-popup-content {
+  margin: 12px !important;
+}
+
+.leaflet-popup-close-button {
+  color: #94a3b8 !important;
+}
+
+.leaflet-popup-close-button:hover {
+  color: #38bdf8 !important;
+}
+
+/* =====================================================
+   SCROLLBAR
+===================================================== */
+
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #050505;
+  background: #030712;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(249, 115, 22, 0.35);
+  background: #1f2937;
   border-radius: 999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(249, 115, 22, 0.6);
+  background: #38bdf8;
 }
 
-/* Leaflet controls */
-.leaflet-control-zoom a {
-  background: #09090b !important;
-  color: #fb923c !important;
-  border-color: rgba(249, 115, 22, 0.22) !important;
+/* =====================================================
+   TEXT SELECTION
+===================================================== */
+
+::selection {
+  background: rgba(56, 189, 248, 0.25);
+  color: #ffffff;
 }
 
-.leaflet-control-attribution {
-  background: rgba(5, 5, 5, 0.82) !important;
-  color: #71717a !important;
+/* =====================================================
+   RESPONSIVE SUPPORT
+===================================================== */
+
+@media (max-width: 1024px) {
+  .leaflet-control-zoom a {
+    width: 30px !important;
+    height: 30px !important;
+  }
 }
 
-.leaflet-control-attribution a {
-  color: #fb923c !important;
+@media (max-width: 640px) {
+  .leaflet-control-zoom {
+    display: none;
+  }
+
+  .leaflet-control-attribution {
+    font-size: 8px !important;
+  }
 }
