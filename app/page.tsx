@@ -1301,6 +1301,7 @@ export default function Home() {
                   setShowInfo(false)
                 }
                 className="text-xl text-slate-400 hover:text-white"
+                aria-label="Close application information"
               >
                 ×
               </button>
@@ -1319,10 +1320,18 @@ export default function Home() {
               </div>
 
               <div className="mt-3 text-sm font-semibold">
-                Developed by: Diyamol Jose
+                Architect: Diyamol Jose
               </div>
 
               <div className="mt-2 text-xs text-slate-400">
+                Batch: Batch 2 Interns
+              </div>
+
+              <div className="mt-1 text-xs text-slate-400">
+                Stack: Next.js, FastAPI, Tailwind CSS, React Leaflet
+              </div>
+
+              <div className="mt-1 text-xs text-slate-400">
                 PoC ID: 26
               </div>
 
