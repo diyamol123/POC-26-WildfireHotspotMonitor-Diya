@@ -185,14 +185,14 @@ The workflow communicates wildfire detection through operational intelligence in
 
 ---
 
-### 11. Frontend-to-Backend Communication --- NOT APPLICABLE
+### 11. Frontend-to-Backend Communication --- PASS
 
 **Test:** Verify whether the current POC contains an active frontend-to-backend API integration.
 
-**Result:** NOT APPLICABLE for the current frontend POC implementation.
+**Result:** PASS
 
 **Reason:**
-The current implementation uses the defined frontend hotspot dataset and does not expose an active backend API communication flow requiring UAT verification.
+The current implementation uses an active FastAPI backend API for hotspot data. The frontend communicates with the FastAPI backend to retrieve hotspot data for display and filtering.
 
 ---
 

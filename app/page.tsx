@@ -1324,7 +1324,7 @@ export default function Home() {
               </div>
 
               <div className="mt-2 text-xs text-slate-400">
-                Batch: Batch 2 Interns
+                Batch: Batch 8 / MA College
               </div>
 
               <div className="mt-1 text-xs text-slate-400">
