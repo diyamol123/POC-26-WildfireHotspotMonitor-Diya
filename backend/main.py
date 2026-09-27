@@ -156,14 +156,7 @@ def health():
 # HOTSPOTS
 # ---------------------------------------------------------
 
-@app.get("/api/hotspots")
-def get_hotspots():
-
-    csv_text = fetch_firms()
-
-    rows = csv.DictReader(
-        io.StringIO(csv_text)
-    )
+def build_hotspots(rows):
 
     hotspots = []
 
@@ -174,9 +167,8 @@ def get_hotspots():
             lat = float(row["latitude"])
             lng = float(row["longitude"])
 
-            brightness_kelvin = float(
-                row["bright_ti4"]
-            )
+            brightness_value = row.get("bright_ti4") or row.get("brightness")
+            brightness_kelvin = float(brightness_value)
 
             brightness_celsius = kelvin_to_celsius(
                 brightness_kelvin
@@ -196,45 +188,19 @@ def get_hotspots():
                 lng
             )
 
-            frp = row.get("frp")
-
-            confidence = row.get(
-                "confidence"
-            )
-
-            acquisition_date = row.get(
-                "acq_date"
-            )
-
-            acquisition_time = row.get(
-                "acq_time"
-            )
-
             hotspots.append({
 
                 "id": index,
-
                 "lat": lat,
-
                 "lng": lng,
-
                 "intensity": intensity,
-
                 "location": location,
-
-                "temp": (
-                    f"{brightness_celsius:.1f}°C"
-                ),
-
+                "temp": f"{brightness_celsius:.1f}°C",
                 "sensor": sensor,
-
-                "frp": frp,
-
-                "confidence": confidence,
-
-                "acq_date": acquisition_date,
-
-                "acq_time": acquisition_time,
+                "frp": row.get("frp"),
+                "confidence": row.get("confidence"),
+                "acq_date": row.get("acq_date"),
+                "acq_time": row.get("acq_time"),
 
             })
 
@@ -247,3 +213,36 @@ def get_hotspots():
             continue
 
     return hotspots
+
+
+@app.get("/api/hotspots")
+def get_hotspots():
+
+    csv_text = fetch_firms()
+
+    rows = csv.DictReader(
+        io.StringIO(csv_text)
+    )
+
+    return build_hotspots(rows)
+
+
+@app.get("/api/hotspots/historical")
+def get_historical_hotspots():
+
+    historical_file = os.path.join(
+        os.path.dirname(__file__),
+        "historical_data",
+        "wildfire_2025_display.csv",
+    )
+
+    with open(
+        historical_file,
+        "r",
+        encoding="utf-8",
+        newline=""
+    ) as file:
+
+        rows = csv.DictReader(file)
+
+        return build_hotspots(rows)

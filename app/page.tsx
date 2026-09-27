@@ -36,6 +36,9 @@ export default function Home() {
   const [sensorFilter, setSensorFilter] =
     useState<"ALL" | "VIIRS" | "MODIS">("ALL");
 
+  const [dataPeriod, setDataPeriod] =
+    useState<"LIVE" | "2025">("LIVE");
+
   const [aoiBounds, setAoiBounds] = useState<
     [[number, number], [number, number]] | null
   >(null);
@@ -80,8 +83,13 @@ export default function Home() {
         setLoading(true);
         setError(null);
 
+        const endpoint =
+          dataPeriod === "2025"
+            ? "/api/hotspots/historical"
+            : "/api/hotspots";
+
         const response = await fetch(
-          `${API}/api/hotspots`,
+          `${API}${endpoint}`,
           {
             cache: "no-store",
           }
@@ -117,7 +125,7 @@ export default function Home() {
     };
 
     loadHotspots();
-  }, []);
+  }, [dataPeriod]);
 
   // =====================================================
   // SENSOR + AOI + TIME FILTER
@@ -186,6 +194,21 @@ export default function Home() {
         return true;
       }
 
+      if (dataPeriod === "2025") {
+        const historicalEnd = new Date(
+          "2025-12-31T23:59:59Z"
+        );
+
+        const daysFromEnd =
+          (historicalEnd.getTime() - acquisitionTime) /
+          (1000 * 60 * 60 * 24);
+
+        return (
+          daysFromEnd >= timeOffset - 1 &&
+          daysFromEnd <= timeOffset + 1
+        );
+      }
+
       const hoursAgo =
         (now - acquisitionTime) /
         (1000 * 60 * 60);
@@ -203,6 +226,7 @@ export default function Home() {
     hotspots,
     sensorFilter,
     timeOffset,
+    dataPeriod,
     aoiBounds,
   ]);
 
@@ -627,6 +651,37 @@ export default function Home() {
         "
       >
         <div className="mb-2 text-[9px] tracking-widest text-[#38BDF8]">
+          DATA PERIOD
+        </div>
+
+        <div className="mb-3 flex gap-1.5">
+          {(["LIVE", "2025"] as const).map((period) => (
+            <button
+              key={period}
+              onClick={() => {
+                setDataPeriod(period);
+                setSelected(null);
+              }}
+              className={`
+                rounded-md
+                px-3
+                py-2
+                text-[10px]
+                font-medium
+                transition
+                ${
+                  dataPeriod === period
+                    ? "bg-[#38BDF8] text-black"
+                    : "border border-[#1F2937] bg-white/5 text-slate-300 hover:border-[#38BDF8]/40"
+                }
+              `}
+            >
+              {period}
+            </button>
+          ))}
+        </div>
+
+        <div className="mb-2 text-[9px] tracking-widest text-[#38BDF8]">
           SENSOR
         </div>
 
@@ -843,16 +898,18 @@ export default function Home() {
           </span>
 
           <span className="font-mono text-xs text-slate-300">
-            {timeOffset === 0
-              ? "NOW"
-              : `${timeOffset}H AGO`}
+            {dataPeriod === "2025"
+              ? `${timeOffset + 1}D AGO`
+              : timeOffset === 0
+                ? "NOW"
+                : `${timeOffset}H AGO`}
           </span>
         </div>
 
         <input
           type="range"
           min="0"
-          max="24"
+          max={dataPeriod === "2025" ? 364 : 24}
           value={timeOffset}
           onChange={(event) =>
             setTimeOffset(
@@ -865,7 +922,7 @@ export default function Home() {
 
         <div className="mt-1 flex justify-between text-[9px] text-slate-600">
           <span>NOW</span>
-          <span>24H AGO</span>
+          <span>{dataPeriod === "2025" ? "JAN 1, 2025" : "24H AGO"}</span>
         </div>
       </div>
 
